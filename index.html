@@ -1,3 +1,52 @@
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0F2744">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skin Care - Rear Fuse Inspection</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Feuille de style -->
+    <link rel="stylesheet" href="style.css">
+    
+    <meta name="theme-color" content="#0F2744">
+    <link rel="icon" type="image/png" href="icons/icon-192.png">
+    
+    <!-- Bibliothèque html2pdf pour la génération des rapports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>Skin Care - Rear Fuse Inspection</h1>
+            <p>Documentation aéronautique — PN: C013900001-001</p>
+        </header>
+        
+        <main>
+            <div id="inspection-container">
+                <!-- Chargement dynamique via app.js -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Script principal -->
+    <script src="app.js"></script>
+
+    <!-- Enregistrement du Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('Service Worker enregistré, scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('Échec enregistrement Service Worker:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
