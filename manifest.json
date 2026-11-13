@@ -25,10 +25,5 @@
       "type": "image/png",
       "form_factor": "wide"
     },
-    {
-      "src": "icons/icon-192.png",
-      "sizes": "320x320",
-      "type": "image/png"
-    }
-  ]
+    ]
 }
