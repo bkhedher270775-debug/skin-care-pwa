@@ -1,0 +1,21 @@
+{
+  "name": "Skin Care - Rear Fuse Inspection",
+  "short_name": "SkinCare",
+  "description": "Documentation aéronautique des anomalies de surface - Rear Fuse PN: C013900001-001",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#09111E",
+  "theme_color": "#0F2744",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
