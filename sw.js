@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skin-care-v3';
+const CACHE_NAME = 'skin-care-v8';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -32,14 +32,16 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Stratégie Network First : cherche d'abord la mise à jour sur GitHub, sinon utilise le cache hors-ligne
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      });
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        return caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+      })
+      .catch(() => caches.match(event.request))
   );
 });
