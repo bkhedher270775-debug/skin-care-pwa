@@ -9,10 +9,10 @@
     <meta http-equiv="Expires" content="0">
     <title>Skin Care - Rear Fuse Inspection (V12)</title>
     
-    <!-- PWA Manifest -->
+    <!-- PWA Manifest V12 -->
     <link rel="manifest" href="manifest.json?v=12">
     
-    <!-- Feuille de style -->
+    <!-- Feuille de style V12 -->
     <link rel="stylesheet" href="style.css?v=12">
     
     <meta name="theme-color" content="#0F2744">
@@ -26,7 +26,7 @@
         <header>
             <div style="display:flex; justify-content:center; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
                 <span class="header-badge" style="margin-bottom:0;">REAR FUSE PN: C013900001-001</span>
-                <span class="header-badge" style="margin-bottom:0; background:rgba(16,185,129,0.2); color:#34D399; border-color:#10B981;">VERSION V11</span>
+                <span class="header-badge" style="margin-bottom:0; background:rgba(16,185,129,0.2); color:#34D399; border-color:#10B981;">VERSION V12</span>
                 <button type="button" onclick="forceMobileUpdate()" style="width:auto; padding:0.2rem 0.6rem; font-size:0.75rem; background:#334155; border-radius:999px;">
                     🔄 Actualiser App
                 </button>
@@ -36,21 +36,21 @@
         </header>
         
         <main id="inspection-container">
-            <!-- Interface générée dynamiquement par app.js -->
+            <!-- Interface (Écran Mot de passe puis Formulaire) générée dynamiquement par app.js -->
         </main>
     </div>
 
-    <!-- Script principal V11 -->
+    <!-- Script principal V12 -->
     <script src="app.js?v=12"></script>
 
-    <!-- Enregistrement du Service Worker avec rechargement automatique -->
+    <!-- Enregistrement du Service Worker V12 avec rechargement automatique -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=11')
+                navigator.serviceWorker.register('./sw.js?v=12')
                     .then(reg => {
                         reg.update();
-                        console.log('Service Worker V11 actif :', reg.scope);
+                        console.log('Service Worker V12 actif :', reg.scope);
                     })
                     .catch(err => console.error('Erreur Service Worker :', err));
             });
