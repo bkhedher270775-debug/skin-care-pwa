@@ -3,9 +3,9 @@ const CACHE_NAME = 'skin-care-v12';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './style.css?v=11',
+  './style.css?v=12',
   './app.js?v=11',
-  './manifest.json?v=11',
+  './manifest.json?v=12',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
