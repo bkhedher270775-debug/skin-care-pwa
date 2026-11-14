@@ -3,24 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skin Care - Rear Fuse Inspection</title>
+    <!-- Balises anti-cache pour forcer le téléphone à vérifier les mises à jour -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Skin Care - Rear Fuse Inspection (V11)</title>
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json?v=11">
     
     <!-- Feuille de style -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=11">
     
     <meta name="theme-color" content="#0F2744">
     <link rel="icon" type="image/png" href="icons/icon-192.png">
     
-    <!-- Bibliothèque html2pdf pour la génération des rapports PDF -->
+    <!-- Bibliothèque html2pdf -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
     <div id="app">
         <header>
-            <div class="header-badge">REAR FUSE PN: C013900001-001</div>
+            <div style="display:flex; justify-content:center; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+                <span class="header-badge" style="margin-bottom:0;">REAR FUSE PN: C013900001-001</span>
+                <span class="header-badge" style="margin-bottom:0; background:rgba(16,185,129,0.2); color:#34D399; border-color:#10B981;">VERSION V11</span>
+                <button type="button" onclick="forceMobileUpdate()" style="width:auto; padding:0.2rem 0.6rem; font-size:0.75rem; background:#334155; border-radius:999px;">
+                    🔄 Actualiser App
+                </button>
+            </div>
             <h1>Skin Care — Inspection Production & Qualité</h1>
             <p>Documentation des anomalies de surface par numéro de série avion</p>
         </header>
@@ -30,16 +40,26 @@
         </main>
     </div>
 
-    <!-- Script principal -->
-    <script src="app.js?v=8"></script>
+    <!-- Script principal V11 -->
+    <script src="app.js?v=11"></script>
 
-    <!-- Enregistrement du Service Worker -->
+    <!-- Enregistrement du Service Worker avec rechargement automatique -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker actif :', reg.scope))
+                navigator.serviceWorker.register('./sw.js?v=11')
+                    .then(reg => {
+                        reg.update();
+                        console.log('Service Worker V11 actif :', reg.scope);
+                    })
                     .catch(err => console.error('Erreur Service Worker :', err));
+            });
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
             });
         }
     </script>

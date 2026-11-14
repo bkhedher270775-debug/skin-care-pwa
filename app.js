@@ -1,22 +1,22 @@
 // =========================================================================
-// APP.JS - Skin Care (Rear Fuse Inspection PN: C013900001-001) - VERSION V8
-// Optimisé Téléphone (Pièce jointe auto via Partage Natif) & PC
+// APP.JS - Skin Care (Rear Fuse Inspection PN: C013900001-001) - VERSION V11
+// Photos PDF Grand Format (680 x 512 px) + Anti-Cache Mobile + Suppression BDD
 // =========================================================================
 
 const DEFAULT_PARTS = [
     { name: "Top skin", pn: "C01391101-105", category: "skin" },
-    { name: "upper R/h skin", pn: "C01391401-103", category: "skin" },
-    { name: "upper l/h skin", pn: "C01391201-103", category: "skin" },
-    { name: "Lower r/h skin", pn: "C01392401-101", category: "skin" },
-    { name: "Lower l/h skin", pn: "CO1392201-101", category: "skin" },
-    { name: "lower skin", pn: "C01392101-103", category: "skin" },
-    { name: "cargo service panel", pn: "C01392118-101", category: "panel" },
-    { name: "water service panel", pn: "C01392415-101", category: "panel" },
-    { name: "waste service panel", pn: "C01392116-101", category: "panel" }
+    { name: "Upper R/H skin", pn: "C01391401-103", category: "skin" },
+    { name: "Upper L/H skin", pn: "C01391201-103", category: "skin" },
+    { name: "Lower R/H skin", pn: "C01392401-101", category: "skin" },
+    { name: "Lower L/H skin", pn: "CO1392201-101", category: "skin" },
+    { name: "Lower skin", pn: "C01392101-103", category: "skin" },
+    { name: "Cargo service panel", pn: "C01392118-101", category: "panel" },
+    { name: "Water service panel", pn: "C01392415-101", category: "panel" },
+    { name: "Waste service panel", pn: "C01392116-101", category: "panel" }
 ];
 
 const DEFAULT_ANOMALIES = [
-    "depression", "bump", "Tool mark", "flashness", "scratch", "Paint", "sealing aérodynamique", "over step"
+    "Depression", "Bump", "Tool mark", "Flashness", "Scratch", "Paint", "Sealing aérodynamique", "Over Step"
 ];
 
 const DEFAULT_EMAILS = [
@@ -25,7 +25,7 @@ const DEFAULT_EMAILS = [
 ];
 
 let currentAircraftReport = {
-    aircraftSN: "AC 55101",
+    aircraftSN: "AC 55XXX",
     operatorName: "",
     anomalies: []
 };
@@ -48,8 +48,29 @@ document.addEventListener('DOMContentLoaded', () => {
     renderApp();
 });
 
+// Fonction pour forcer la mise à jour sur téléphone en 1 clic
+async function forceMobileUpdate() {
+    if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+            await reg.unregister();
+        }
+    }
+    if ('caches' in window) {
+        const keys = await caches.keys();
+        for (const key of keys) {
+            await caches.delete(key);
+        }
+    }
+    window.location.href = window.location.pathname + '?v=' + Date.now();
+}
+
 function saveDraft() {
-    localStorage.setItem('skincare_current_draft', JSON.stringify(currentAircraftReport));
+    try {
+        localStorage.setItem('skincare_current_draft', JSON.stringify(currentAircraftReport));
+    } catch (e) {
+        console.warn("Quota localStorage atteint (photos HD volumineuses). Conservation en mémoire vive.", e);
+    }
 }
 
 function loadSavedDraft() {
@@ -59,16 +80,36 @@ function loadSavedDraft() {
     }
 }
 
+function getCustomParts() {
+    return JSON.parse(localStorage.getItem('skincare_custom_parts') || '[]');
+}
+
+function getCustomAnomalies() {
+    return JSON.parse(localStorage.getItem('skincare_custom_anomalies') || '[]');
+}
+
+function getCustomEmails() {
+    return JSON.parse(localStorage.getItem('skincare_custom_emails') || '[]');
+}
+
+function getCustomFrames() {
+    return JSON.parse(localStorage.getItem('skincare_custom_frames') || '[]');
+}
+
+function getCustomStringers() {
+    return JSON.parse(localStorage.getItem('skincare_custom_stringers') || '[]');
+}
+
 function getPartsList() {
-    return [...DEFAULT_PARTS, ...JSON.parse(localStorage.getItem('skincare_custom_parts') || '[]')];
+    return [...DEFAULT_PARTS, ...getCustomParts()];
 }
 
 function getAnomaliesList() {
-    return [...DEFAULT_ANOMALIES, ...JSON.parse(localStorage.getItem('skincare_custom_anomalies') || '[]')];
+    return [...DEFAULT_ANOMALIES, ...getCustomAnomalies()];
 }
 
 function getEmailsList() {
-    return [...DEFAULT_EMAILS, ...JSON.parse(localStorage.getItem('skincare_custom_emails') || '[]')];
+    return [...DEFAULT_EMAILS, ...getCustomEmails()];
 }
 
 function getFramesList() {
@@ -76,7 +117,7 @@ function getFramesList() {
     for (let i = 62; i <= 79; i++) {
         if (i !== 73) frames.push(`FR${i}`);
     }
-    return [...frames, ...JSON.parse(localStorage.getItem('skincare_custom_frames') || '[]')];
+    return [...frames, ...getCustomFrames()];
 }
 
 function getStringersList() {
@@ -85,7 +126,7 @@ function getStringersList() {
         stringers.push({ code: `STRG ${j}L`, num: j });
         stringers.push({ code: `STRG ${j}R`, num: j });
     }
-    return [...stringers, ...JSON.parse(localStorage.getItem('skincare_custom_stringers') || '[]')];
+    return [...stringers, ...getCustomStringers()];
 }
 
 function renderApp() {
@@ -107,17 +148,45 @@ function renderApp() {
     const emailOptions = '<option value="">-- Choisir l\'adresse e-mail destinataire --</option>' +
         getEmailsList().map(e => `<option value="${e}">${e}</option>`).join('');
 
+    const customPartsHTML = getCustomParts().map((p, idx) => `
+        <span style="display:inline-flex;align-items:center;gap:4px;background:#1E3A8A;padding:3px 8px;border-radius:4px;font-size:0.78rem;margin:2px;">
+            ${p.name} (${p.pn})
+            <button type="button" onclick="adminDeletePart(${idx})" style="background:#EF4444;color:#fff;border:none;border-radius:3px;width:18px;height:18px;font-size:11px;padding:0;line-height:18px;cursor:pointer;" title="Supprimer">×</button>
+        </span>
+    `).join('');
+
+    const customAnomaliesHTML = getCustomAnomalies().map((a, idx) => `
+        <span style="display:inline-flex;align-items:center;gap:4px;background:#1E3A8A;padding:3px 8px;border-radius:4px;font-size:0.78rem;margin:2px;">
+            ${a}
+            <button type="button" onclick="adminDeleteAnomaly(${idx})" style="background:#EF4444;color:#fff;border:none;border-radius:3px;width:18px;height:18px;font-size:11px;padding:0;line-height:18px;cursor:pointer;" title="Supprimer">×</button>
+        </span>
+    `).join('');
+
+    const customFramesHTML = getCustomFrames().map((f, idx) => `
+        <span style="display:inline-flex;align-items:center;gap:4px;background:#1E3A8A;padding:3px 8px;border-radius:4px;font-size:0.78rem;margin:2px;">
+            ${f}
+            <button type="button" onclick="adminDeleteFrame(${idx})" style="background:#EF4444;color:#fff;border:none;border-radius:3px;width:18px;height:18px;font-size:11px;padding:0;line-height:18px;cursor:pointer;" title="Supprimer">×</button>
+        </span>
+    `).join('');
+
+    const customStringersHTML = getCustomStringers().map((s, idx) => `
+        <span style="display:inline-flex;align-items:center;gap:4px;background:#1E3A8A;padding:3px 8px;border-radius:4px;font-size:0.78rem;margin:2px;">
+            ${s.code}
+            <button type="button" onclick="adminDeleteStringer(${idx})" style="background:#EF4444;color:#fff;border:none;border-radius:3px;width:18px;height:18px;font-size:11px;padding:0;line-height:18px;cursor:pointer;" title="Supprimer">×</button>
+        </span>
+    `).join('');
+
     const isEditing = editingAnomalyIndex !== -1;
 
     container.innerHTML = `
         <section class="card">
             <h2>
-                <span>1. Identification Avion (Rapport Unique par SN)</span>
+                <span>1. Identification Avion (Rapport Unique par AC)</span>
                 <button type="button" class="secondary small-btn" onclick="resetAircraftReport()">Nouvel Avion</button>
             </h2>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="ac-serial">Numéro de Série Avion (ex: AC 55xxx)</label>
+                    <label for="ac-serial">Numéro Avion (ex: AC 55xxx)</label>
                     <input type="text" id="ac-serial" value="${currentAircraftReport.aircraftSN}" placeholder="Ex: AC 55101" onchange="updateAircraftHeader()">
                 </div>
                 <div class="form-group">
@@ -166,10 +235,10 @@ function renderApp() {
                 <textarea id="anomaly-comment" rows="2" placeholder="Ajouter une note ou précision sur cette anomalie (état de surface, contexte, etc.)..."></textarea>
             </div>
 
-            <!-- CAPTURE PHOTO PAR CAMÉRA DU TÉLÉPHONE (ZOOM OUT & ZOOM IN) -->
+            <!-- CAPTURE PHOTO HD PAR CAMÉRA DU TÉLÉPHONE (ZOOM OUT & ZOOM IN) -->
             <div class="form-row">
                 <div class="dimensions-box" style="margin-bottom:0;">
-                    <label style="display:block; margin-bottom:0.5rem; color:#60A5FA;">1. Photo Zone (Zoom Out)</label>
+                    <label style="display:block; margin-bottom:0.5rem; color:#60A5FA;">1. Photo Zone HD (Zoom Out)</label>
                     <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
                         <button type="button" class="small-btn" style="flex:1; background:#0284C7;" onclick="document.getElementById('cam-zoom-out').click()">
                             📷 Appareil Photo
@@ -187,7 +256,7 @@ function renderApp() {
                 </div>
 
                 <div class="dimensions-box" style="margin-bottom:0;">
-                    <label style="display:block; margin-bottom:0.5rem; color:#60A5FA;">2. Photo(s) Anomalie (Zoom In)</label>
+                    <label style="display:block; margin-bottom:0.5rem; color:#60A5FA;">2. Photo(s) Anomalie HD (Zoom In)</label>
                     <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
                         <button type="button" class="small-btn" style="flex:1; background:#0284C7;" onclick="document.getElementById('cam-zoom-in').click()">
                             📷 + Photo Caméra
@@ -207,7 +276,7 @@ function renderApp() {
 
             <!-- VISEUR CAMÉRA EN DIRECT -->
             <div id="live-camera-modal" style="display:none; background:#050B14; border:2px solid #3B82F6; border-radius:8px; padding:1rem; margin-top:1rem; text-align:center;">
-                <h3 id="live-camera-title" style="color:#60A5FA; margin-bottom:0.5rem;">Caméra en direct</h3>
+                <h3 id="live-camera-title" style="color:#60A5FA; margin-bottom:0.5rem;">Caméra HD en direct</h3>
                 <div style="position:relative; width:100%; max-width:480px; margin:0 auto; overflow:hidden; border-radius:6px; background:#000;">
                     <video id="live-video" autoplay playsinline style="width:100%; display:block; transform-origin:center center;"></video>
                 </div>
@@ -218,7 +287,7 @@ function renderApp() {
                 </div>
                 <div style="display:flex; gap:0.75rem; justify-content:center; margin-top:0.75rem;">
                     <button type="button" class="success small-btn" onclick="takeLiveSnapshot()" style="padding:0.6rem 1.5rem; font-size:0.95rem;">
-                        📸 Capturer la Photo
+                        📸 Capturer la Photo HD
                     </button>
                     <button type="button" class="danger small-btn" onclick="closeLiveCamera()">
                         Fermer Caméra
@@ -242,8 +311,13 @@ function renderApp() {
             <div id="aircraft-anomalies-list"></div>
             <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1rem 0;">
             <div class="form-group">
-                <label for="recipient-email">Adresse E-mail du Destinataire (Chef d'équipe Production / Qualité)</label>
-                <select id="recipient-email">${emailOptions}</select>
+                <label for="recipient-email">Adresse E-mail du Destinataire (Chef d'équipe Production / Qualité / Ingénierie)</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <select id="recipient-email" style="flex: 1;">${emailOptions}</select>
+                    <button type="button" class="danger small-btn" onclick="deleteSelectedEmail()" title="Supprimer l'adresse e-mail sélectionnée">
+                        🗑️ Supprimer E-mail
+                    </button>
+                </div>
                 <div class="email-inline-add">
                     <input type="email" id="new-email-input" placeholder="Ajouter une nouvelle adresse e-mail...">
                     <button type="button" class="secondary small-btn" onclick="addNewEmail()">+ Ajouter E-mail</button>
@@ -251,20 +325,20 @@ function renderApp() {
             </div>
             <div class="form-row" style="margin-top: 1rem;">
                 <button type="button" class="success" onclick="sendReportByEmail()">
-                    📧 Préparer & Envoyer par E-mail (avec PDF joint)
+                    📧 Préparer & Envoyer par E-mail (avec PDF HD joint)
                 </button>
                 <div style="display: flex; gap: 0.5rem;">
-                    <button type="button" onclick="downloadReportPDF()">Télécharger PDF</button>
+                    <button type="button" onclick="downloadReportPDF()">Télécharger PDF HD</button>
                     <button type="button" class="secondary" onclick="printReportDirectly()">Imprimer</button>
                 </div>
             </div>
         </section>
 
         <section class="card card-admin">
-            <h2>4. Espace Chef d'Équipe Production / Qualité — Ajout Base de Données</h2>
+            <h2>4. Espace Chef d'Équipe Production / Qualité — Ajout & Suppression Base de Données</h2>
             <div class="form-row-3">
                 <div class="dimensions-box" style="margin-bottom:0;">
-                    <h3>Ajouter Pièce / Skin</h3>
+                    <h3>Pièce / Skin</h3>
                     <div class="form-group">
                         <input type="text" id="admin-part-name" placeholder="Nom pièce / skin">
                         <input type="text" id="admin-part-pn" placeholder="Part Number (PN)">
@@ -272,25 +346,41 @@ function renderApp() {
                             <option value="skin">Skin</option>
                             <option value="panel">Service Panel</option>
                         </select>
-                        <button type="button" class="small-btn" onclick="adminAddPart()" style="width:100%;">Ajouter Pièce</button>
+                        <button type="button" class="small-btn" onclick="adminAddPart()" style="width:100%;">+ Ajouter Pièce</button>
                     </div>
+                    ${customPartsHTML ? `<div style="margin-top:0.5rem;border-top:1px solid var(--border-color);padding-top:0.4rem;"><small style="color:var(--text-muted);display:block;margin-bottom:3px;">Pièces ajoutées :</small>${customPartsHTML}</div>` : ''}
                 </div>
+
                 <div class="dimensions-box" style="margin-bottom:0;">
-                    <h3>Ajouter Type d'Anomalie</h3>
+                    <h3>Type d'Anomalie</h3>
                     <div class="form-group">
                         <input type="text" id="admin-anomaly-name" placeholder="Nom de l'anomalie">
-                        <button type="button" class="small-btn" onclick="adminAddAnomaly()" style="width:100%; margin-top: 0.5rem;">Ajouter Anomalie</button>
+                        <button type="button" class="small-btn" onclick="adminAddAnomaly()" style="width:100%; margin-top: 0.5rem;">+ Ajouter Anomalie</button>
                     </div>
+                    ${customAnomaliesHTML ? `<div style="margin-top:0.5rem;border-top:1px solid var(--border-color);padding-top:0.4rem;"><small style="color:var(--text-muted);display:block;margin-bottom:3px;">Anomalies ajoutées :</small>${customAnomaliesHTML}</div>` : ''}
                 </div>
+
                 <div class="dimensions-box" style="margin-bottom:0;">
-                    <h3>Ajouter une Zone</h3>
+                    <h3>Zone (Frame / Stringer)</h3>
                     <div class="form-group">
                         <input type="text" id="admin-zone-frame" placeholder="Frame (ex: FR80)">
-                        <button type="button" class="small-btn" onclick="adminAddFrame()" style="width:100%;">+ Frame</button>
+                        <button type="button" class="small-btn" onclick="adminAddFrame()" style="width:100%;">+ Ajouter Frame</button>
                         <input type="text" id="admin-zone-strg" placeholder="Stringer (ex: STRG 37L)" style="margin-top:0.4rem;">
-                        <button type="button" class="small-btn" onclick="adminAddStringer()" style="width:100%;">+ Stringer</button>
+                        <button type="button" class="small-btn" onclick="adminAddStringer()" style="width:100%;">+ Ajouter Stringer</button>
                     </div>
+                    ${(customFramesHTML || customStringersHTML) ? `<div style="margin-top:0.5rem;border-top:1px solid var(--border-color);padding-top:0.4rem;"><small style="color:var(--text-muted);display:block;margin-bottom:3px;">Zones ajoutées :</small>${customFramesHTML}${customStringersHTML}</div>` : ''}
                 </div>
+            </div>
+
+            <!-- BOUTON QR CODE & AFFICHE ATELIER -->
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                    <strong style="color: #60A5FA; font-size: 0.95rem;">Déploiement Atelier — Accès Rapide Opérateurs (V11)</strong>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Générer le QR Code de l'application (avec anti-cache v=11) pour le scanner au téléphone ou imprimer l'affiche.</p>
+                </div>
+                <button type="button" class="small-btn" style="background-color: #8B5CF6;" onclick="showWorkshopQRCode()">
+                    📱 Afficher / Imprimer QR Code Atelier
+                </button>
             </div>
         </section>
     `;
@@ -299,7 +389,7 @@ function renderApp() {
 }
 
 // =========================================================================
-// FONCTIONS CAMÉRA DIRECTE INTÉGRÉE
+// FONCTIONS CAMÉRA DIRECTE INTÉGRÉE (RÉSOLUTION HD 1600px)
 // =========================================================================
 
 async function openLiveCamera(target) {
@@ -320,7 +410,7 @@ async function openLiveCamera(target) {
             activeVideoStream.getTracks().forEach(t => t.stop());
         }
         activeVideoStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 960 } },
+            video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1440 } },
             audio: false
         });
         video.srcObject = activeVideoStream;
@@ -331,8 +421,8 @@ async function openLiveCamera(target) {
         applyVideoZoom(defaultZoom);
 
         title.textContent = target === 'out'
-            ? "Caméra Directe — Photo Zone (Zoom Out)"
-            : "Caméra Directe — Photo Rapprochée de l'Anomalie (Zoom In)";
+            ? "Caméra Directe HD — Photo Zone (Zoom Out)"
+            : "Caméra Directe HD — Photo Rapprochée de l'Anomalie (Zoom In)";
         modal.scrollIntoView({ behavior: 'smooth' });
     } catch (err) {
         if (target === 'out') document.getElementById('cam-zoom-out').click();
@@ -354,11 +444,11 @@ function takeLiveSnapshot() {
 
     const zoom = parseFloat(slider ? slider.value : 1);
     const canvas = document.createElement('canvas');
-    const vw = video.videoWidth || 800;
-    const vh = video.videoHeight || 600;
+    const vw = video.videoWidth || 1600;
+    const vh = video.videoHeight || 1200;
 
-    canvas.width = 800;
-    canvas.height = Math.round((vh / vw) * 800);
+    canvas.width = 1600;
+    canvas.height = Math.round((vh / vw) * 1600);
     const ctx = canvas.getContext('2d');
 
     const cropW = vw / zoom;
@@ -367,7 +457,7 @@ function takeLiveSnapshot() {
     const startY = (vh - cropH) / 2;
 
     ctx.drawImage(video, startX, startY, cropW, cropH, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
 
     if (currentCameraTarget === 'out') {
         tempZoomOutPhoto = dataUrl;
@@ -394,7 +484,7 @@ function closeLiveCamera() {
 function updateAircraftHeader() {
     const snInput = document.getElementById('ac-serial');
     const opInput = document.getElementById('operator-name');
-    if (snInput) currentAircraftReport.aircraftSN = snInput.value.trim() || "AC 55xxx";
+    if (snInput) currentAircraftReport.aircraftSN = snInput.value.trim() || "AC 55XXX";
     if (opInput) currentAircraftReport.operatorName = opInput.value.trim();
     saveDraft();
     renderApp();
@@ -407,7 +497,7 @@ function resetAircraftReport() {
     editingAnomalyIndex = -1;
     tempZoomOutPhoto = null;
     tempZoomInPhotos = [];
-    currentAircraftReport = { aircraftSN: newSN.trim() || "AC 55xxx", operatorName: currentAircraftReport.operatorName, anomalies: [] };
+    currentAircraftReport = { aircraftSN: newSN.trim() || "AC 55XXX", operatorName: currentAircraftReport.operatorName, anomalies: [] };
     saveDraft();
     renderApp();
 }
@@ -465,7 +555,7 @@ function handlePartOrAnomalyChange() {
             <h3>Dimensions — Flashness (inch)</h3>
             <div class="form-row">
                 <div class="form-group" style="margin-bottom:0;">
-                    <label for="flash-sign">Orientation (+ zéro / - zéro)</label>
+                    <label for="flash-sign">Orientation (+ 0 / - 0)</label>
                     <select id="flash-sign">
                         <option value="+0">+ zéro</option>
                         <option value="-0">- zéro</option>
@@ -498,8 +588,8 @@ function handlePartOrAnomalyChange() {
                 <label for="clad-test">Test Clad :</label>
                 <select id="clad-test">
                     <option value="Non spécifié">-- Sélectionner résultat Test Clad --</option>
-                    <option value="Positif (+)">Positif (+)</option>
-                    <option value="Négatif (-)">Négatif (-)</option>
+                    <option value="Positif">Positif</option>
+                    <option value="Négatif">Négatif</option>
                 </select>
             </div>
         `;
@@ -530,15 +620,18 @@ function compressAndReadImage(file, callback) {
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement('canvas');
-            const maxDim = 800;
+            const maxDim = 1600;
             let width = img.width;
             let height = img.height;
             if (width > height && width > maxDim) { height *= maxDim / width; width = maxDim; }
             else if (height > maxDim) { width *= maxDim / height; height = maxDim; }
-            canvas.width = width;
-            canvas.height = height;
-            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-            callback(canvas.toDataURL('image/jpeg', 0.82));
+            canvas.width = Math.round(width);
+            canvas.height = Math.round(height);
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            callback(canvas.toDataURL('image/jpeg', 0.92));
         };
         img.src = event.target.result;
     };
@@ -608,7 +701,7 @@ function addAnomalyToAircraft() {
     const anomalySelect = document.getElementById('anomaly-select');
     const commentInput = document.getElementById('anomaly-comment');
 
-    if (snInput) currentAircraftReport.aircraftSN = snInput.value.trim() || "AC 55xxx";
+    if (snInput) currentAircraftReport.aircraftSN = snInput.value.trim() || "AC 55XXX";
     if (opInput) currentAircraftReport.operatorName = opInput.value.trim();
 
     if (!partSelect.value || !frameSelect.value || !stringerSelect.value || !anomalySelect.value) {
@@ -762,12 +855,16 @@ function renderAnomaliesList() {
     `).join('');
 }
 
+// =========================================================================
+// AJOUT & SUPPRESSION : EMAILS, PIÈCES, ANOMALIES, FRAMES & STRINGERS
+// =========================================================================
+
 function addNewEmail() {
     const input = document.getElementById('new-email-input');
     if (!input || !input.value.trim()) return;
     const email = input.value.trim();
-    let customEmails = JSON.parse(localStorage.getItem('skincare_custom_emails') || '[]');
-    if (!customEmails.includes(email)) {
+    let customEmails = getCustomEmails();
+    if (!customEmails.includes(email) && !DEFAULT_EMAILS.includes(email)) {
         customEmails.push(email);
         localStorage.setItem('skincare_custom_emails', JSON.stringify(customEmails));
     }
@@ -775,69 +872,139 @@ function addNewEmail() {
     document.getElementById('recipient-email').value = email;
 }
 
+function deleteSelectedEmail() {
+    const select = document.getElementById('recipient-email');
+    if (!select || !select.value) {
+        return alert("Veuillez d'abord sélectionner une adresse e-mail dans la liste pour la supprimer.");
+    }
+    const targetEmail = select.value;
+    if (DEFAULT_EMAILS.includes(targetEmail)) {
+        return alert("Cette adresse fait partie des adresses par défaut du système. Seules les adresses ajoutées manuellement peuvent être supprimées.");
+    }
+    if (!confirm(`Voulez-vous vraiment supprimer l'adresse "${targetEmail}" ?`)) return;
+
+    let customEmails = getCustomEmails().filter(e => e !== targetEmail);
+    localStorage.setItem('skincare_custom_emails', JSON.stringify(customEmails));
+    renderApp();
+}
+
 function adminAddPart() {
     const name = document.getElementById('admin-part-name').value.trim();
     const pn = document.getElementById('admin-part-pn').value.trim();
     const category = document.getElementById('admin-part-cat').value;
-    if (!name || !pn) return;
-    let custom = JSON.parse(localStorage.getItem('skincare_custom_parts') || '[]');
+    if (!name || !pn) return alert("Veuillez renseigner le nom et le Part Number.");
+    let custom = getCustomParts();
     custom.push({ name, pn, category });
+    localStorage.setItem('skincare_custom_parts', JSON.stringify(custom));
+    renderApp();
+}
+
+function adminDeletePart(index) {
+    let custom = getCustomParts();
+    if (!custom[index]) return;
+    if (!confirm(`Supprimer la pièce "${custom[index].name} (${custom[index].pn})" ?`)) return;
+    custom.splice(index, 1);
     localStorage.setItem('skincare_custom_parts', JSON.stringify(custom));
     renderApp();
 }
 
 function adminAddAnomaly() {
     const name = document.getElementById('admin-anomaly-name').value.trim();
-    if (!name) return;
-    let custom = JSON.parse(localStorage.getItem('skincare_custom_anomalies') || '[]');
+    if (!name) return alert("Veuillez saisir le nom de l'anomalie.");
+    let custom = getCustomAnomalies();
     custom.push(name);
+    localStorage.setItem('skincare_custom_anomalies', JSON.stringify(custom));
+    renderApp();
+}
+
+function adminDeleteAnomaly(index) {
+    let custom = getCustomAnomalies();
+    if (!custom[index]) return;
+    if (!confirm(`Supprimer le type d'anomalie "${custom[index]}" ?`)) return;
+    custom.splice(index, 1);
     localStorage.setItem('skincare_custom_anomalies', JSON.stringify(custom));
     renderApp();
 }
 
 function adminAddFrame() {
     const frame = document.getElementById('admin-zone-frame').value.trim().toUpperCase();
-    if (!frame) return;
-    let custom = JSON.parse(localStorage.getItem('skincare_custom_frames') || '[]');
+    if (!frame) return alert("Veuillez saisir un code Frame (ex: FR80).");
+    let custom = getCustomFrames();
     custom.push(frame);
+    localStorage.setItem('skincare_custom_frames', JSON.stringify(custom));
+    renderApp();
+}
+
+function adminDeleteFrame(index) {
+    let custom = getCustomFrames();
+    if (!custom[index]) return;
+    if (!confirm(`Supprimer le Frame "${custom[index]}" ?`)) return;
+    custom.splice(index, 1);
     localStorage.setItem('skincare_custom_frames', JSON.stringify(custom));
     renderApp();
 }
 
 function adminAddStringer() {
     const strg = document.getElementById('admin-zone-strg').value.trim().toUpperCase();
-    if (!strg) return;
-    let custom = JSON.parse(localStorage.getItem('skincare_custom_stringers') || '[]');
+    if (!strg) return alert("Veuillez saisir un code Stringer (ex: STRG 37L).");
+    let custom = getCustomStringers();
     const numMatch = strg.match(/\d+/);
     custom.push({ code: strg, num: numMatch ? parseInt(numMatch[0], 10) : 99 });
     localStorage.setItem('skincare_custom_stringers', JSON.stringify(custom));
     renderApp();
 }
 
+function adminDeleteStringer(index) {
+    let custom = getCustomStringers();
+    if (!custom[index]) return;
+    if (!confirm(`Supprimer le Stringer "${custom[index].code}" ?`)) return;
+    custom.splice(index, 1);
+    localStorage.setItem('skincare_custom_stringers', JSON.stringify(custom));
+    renderApp();
+}
+
 // =========================================================================
-// GÉNÉRATION PDF & ENVOI E-MAIL (OPTIMISÉ TÉLÉPHONE + PC)
+// GÉNÉRATION PDF GRAND FORMAT INGÉNIERIE (PHOTOS EXACTEMENT EN 680 x 512 px)
 // =========================================================================
 
 function generateReportHTML(recipientEmail) {
     const rows = currentAircraftReport.anomalies.map((anom, i) => {
-        const zoomInImgs = anom.zoomInPhotos.map(src => `<img src="${src}" style="width:160px;height:120px;object-fit:cover;border:1px solid #94a3b8;margin-right:6px;">`).join('');
+        const zoomInImgs = anom.zoomInPhotos.map((src, idx) => `
+            <div style="margin-bottom:14px;page-break-inside:avoid;">
+                <div style="font-size:12px;font-weight:bold;color:#0f172a;margin-bottom:4px;">Photo Anomalie (Zoom In #${idx + 1}) — 680 × 512 px :</div>
+                <img src="${src}" style="width:680px;height:512px;object-fit:contain;background:#000;border:1px solid #64748b;border-radius:4px;display:block;">
+            </div>
+        `).join('');
+
         return `
-            <div style="border:1px solid #cbd5e1;padding:10px;margin-bottom:12px;page-break-inside:avoid;background:#f8fafc;color:#0f172a;">
-                <h3 style="color:#0F2744;margin:0 0 5px 0;">Anomalie #${i + 1} — ${anom.type.toUpperCase()}</h3>
-                <p style="margin:2px 0;font-size:12px;color:#0f172a;"><strong>Pièce :</strong> ${anom.partName} (PN: ${anom.partPN}) | <strong>Zone :</strong> ${anom.frame} - ${anom.stringer}</p>
-                <p style="margin:2px 0;font-size:12px;color:#0f172a;"><strong>Dimensions :</strong> ${anom.dimensions}</p>
-                ${anom.comment ? `<p style="margin:4px 0;padding:6px;background:#e2e8f0;border-left:3px solid #0F2744;font-size:12px;color:#0f172a;"><strong>Commentaire Opérateur :</strong> ${anom.comment}</p>` : ''}
-                <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:10px;">
-                    ${anom.zoomOutPhoto ? `<div><div style="font-size:10px;font-weight:bold;color:#0f172a;">Zoom Out :</div><img src="${anom.zoomOutPhoto}" style="width:160px;height:120px;object-fit:cover;border:1px solid #94a3b8;"></div>` : ''}
-                    ${anom.zoomInPhotos.length > 0 ? `<div><div style="font-size:10px;font-weight:bold;color:#0f172a;">Zoom In :</div><div style="display:flex;flex-wrap:wrap;">${zoomInImgs}</div></div>` : ''}
+            <div style="border:1px solid #94a3b8;border-radius:6px;padding:14px;margin-bottom:20px;background:#f8fafc;color:#0f172a;">
+                <h3 style="color:#0F2744;margin:0 0 8px 0;font-size:16px;border-bottom:2px solid #cbd5e1;padding-bottom:4px;">
+                    Anomalie #${i + 1} — ${anom.type.toUpperCase()}
+                </h3>
+                <p style="margin:4px 0;font-size:13.5px;color:#0f172a;"><strong>Pièce :</strong> ${anom.partName} (PN: ${anom.partPN}) &nbsp;|&nbsp; <strong>Zone :</strong> ${anom.frame} - ${anom.stringer}</p>
+                <p style="margin:4px 0;font-size:13.5px;color:#0f172a;"><strong>Dimensions :</strong> ${anom.dimensions}</p>
+                ${anom.comment ? `<p style="margin:8px 0;padding:8px;background:#e2e8f0;border-left:4px solid #0F2744;font-size:13px;color:#0f172a;"><strong>Commentaire Opérateur :</strong> ${anom.comment}</p>` : ''}
+                <div style="margin-top:12px;display:flex;flex-direction:column;align-items:center;">
+                    ${anom.zoomOutPhoto ? `
+                        <div style="margin-bottom:14px;page-break-inside:avoid;">
+                            <div style="font-size:12px;font-weight:bold;color:#0f172a;margin-bottom:4px;">Photo Zone (Zoom Out) — 680 × 512 px :</div>
+                            <img src="${anom.zoomOutPhoto}" style="width:680px;height:512px;object-fit:contain;background:#000;border:1px solid #64748b;border-radius:4px;display:block;">
+                        </div>
+                    ` : ''}
+                    ${zoomInImgs}
                 </div>
             </div>`;
     }).join('');
 
     return `
-        <div id="pdf-content-inner" style="width:750px;padding:20px;background:#ffffff;color:#0f172a;font-family:Arial,sans-serif;">
-            <h1 style="color:#0F2744;font-size:18px;border-bottom:2px solid #0F2744;padding-bottom:6px;margin-top:0;">RAPPORT D'INSPECTION — SKIN CARE (Rear Fuse PN: C013900001-001)</h1>
-            <p style="font-size:12px;margin:8px 0;color:#0f172a;"><strong>Avion SN :</strong> ${currentAircraftReport.aircraftSN} | <strong>Opérateur :</strong> ${currentAircraftReport.operatorName || 'N/A'} | <strong>Destinataire :</strong> ${recipientEmail || 'Production & Qualité'} | <strong>Date :</strong> ${new Date().toLocaleDateString()}</p>
+        <div id="pdf-content-inner" style="width:740px;padding:15px;background:#ffffff;color:#0f172a;font-family:Arial,sans-serif;">
+            <h1 style="color:#0F2744;font-size:18px;border-bottom:2px solid #0F2744;padding-bottom:6px;margin-top:0;">RAPPORT D'INSPECTION HAUTE RÉSOLUTION — SKIN CARE (Rear Fuse PN: C013900001-001)</h1>
+            <p style="font-size:12.5px;margin:8px 0 14px 0;color:#0f172a;">
+                <strong>Avion SN :</strong> ${currentAircraftReport.aircraftSN} &nbsp;|&nbsp;
+                <strong>Opérateur :</strong> ${currentAircraftReport.operatorName || 'N/A'} &nbsp;|&nbsp;
+                <strong>Destinataire :</strong> ${recipientEmail || 'Production, Qualité & Ingénierie'} &nbsp;|&nbsp;
+                <strong>Date :</strong> ${new Date().toLocaleDateString()}
+            </p>
             ${rows}
         </div>`;
 }
@@ -869,10 +1036,10 @@ function downloadReportPDF() {
     const fileName = `Rapport_SkinCare_${currentAircraftReport.aircraftSN.replace(/\s+/g, '_')}.pdf`;
 
     const opt = {
-        margin: 8,
+        margin: 6,
         filename: fileName,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollY: 0 },
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2.5, useCORS: true, backgroundColor: '#ffffff', scrollY: 0 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -883,7 +1050,7 @@ function downloadReportPDF() {
             console.error(err);
             if (document.body.contains(overlay)) document.body.removeChild(overlay);
         });
-    }, 300);
+    }, 350);
 }
 
 function printReportDirectly() {
@@ -895,7 +1062,6 @@ function printReportDirectly() {
     w.document.close();
 }
 
-// Étape 1 : Génération du PDF puis ouverture du bouton d'attachement direct
 async function sendReportByEmail() {
     if (currentAircraftReport.anomalies.length === 0) return alert("Ajoutez au moins une anomalie.");
     const recipient = document.getElementById('recipient-email') ? document.getElementById('recipient-email').value : '';
@@ -907,10 +1073,10 @@ async function sendReportByEmail() {
     const fileName = `Rapport_SkinCare_${currentAircraftReport.aircraftSN.replace(/\s+/g, '_')}.pdf`;
     
     const opt = {
-        margin: 8,
+        margin: 6,
         filename: fileName,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollY: 0 },
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2.5, useCORS: true, backgroundColor: '#ffffff', scrollY: 0 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -926,14 +1092,13 @@ async function sendReportByEmail() {
             if (document.body.contains(overlay)) document.body.removeChild(overlay);
             alert("Erreur lors de la préparation du PDF.");
         }
-    }, 250);
+    }, 350);
 }
 
 function showReadyToSendModal(fileName, recipient) {
     let modal = document.getElementById('send-confirm-modal');
     if (modal) modal.remove();
 
-    // Copie automatique de l'adresse e-mail pour le téléphone
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(recipient).catch(() => {});
     }
@@ -943,7 +1108,7 @@ function showReadyToSendModal(fileName, recipient) {
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(9,17,30,0.9);z-index:999999;display:flex;align-items:center;justify-content:center;padding:1rem;';
     modal.innerHTML = `
         <div style="background:#0F2744;border:2px solid #10B981;border-radius:10px;padding:1.5rem;max-width:460px;width:100%;text-align:center;color:#F8FAFC;box-shadow:0 10px 25px rgba(0,0,0,0.5);">
-            <h3 style="color:#34D399;margin-bottom:0.5rem;font-size:1.15rem;">✅ Rapport PDF Prêt à Envoyer !</h3>
+            <h3 style="color:#34D399;margin-bottom:0.5rem;font-size:1.15rem;">✅ Rapport PDF (Photos 680×512px) Prêt !</h3>
             <p style="font-size:0.88rem;color:#94A3B8;margin-bottom:1rem;">
                 Fichier : <strong style="color:#fff;">${fileName}</strong><br>
                 Destinataire copié : <strong style="color:#60A5FA;">${recipient}</strong>
@@ -962,7 +1127,6 @@ function showReadyToSendModal(fileName, recipient) {
     document.body.appendChild(modal);
 }
 
-// Action Mobile : Partage Web natif immédiat (attache le PDF automatiquement dans Gmail/Outlook mobile)
 async function triggerInstantShare() {
     const modal = document.getElementById('send-confirm-modal');
     if (modal) modal.remove();
@@ -973,18 +1137,16 @@ async function triggerInstantShare() {
             await navigator.share({
                 files: [preparedPdfFile],
                 title: `Rapport Skin Care - ${currentAircraftReport.aircraftSN}`,
-                text: `À envoyer à : ${preparedRecipient}\nRapport d'inspection aéronautique Rear Fuse (${currentAircraftReport.anomalies.length} anomalie(s)) pour l'avion ${currentAircraftReport.aircraftSN}.`
+                text: `À envoyer à : ${preparedRecipient}\nRapport d'inspection Skin Care Rear Fuse (${currentAircraftReport.anomalies.length} anomalie(s)) pour l'avion ${currentAircraftReport.aircraftSN}.`
             });
             return;
         } catch (err) {
             console.warn("Partage annulé ou repli PC :", err);
         }
     }
-    // Si appelé depuis un PC qui ne supporte pas le partage de fichier, basculer sur le mode PC
     triggerPcFallback();
 }
 
-// Action PC : Copie du rapport visuel dans le presse-papiers + Téléchargement PDF + Ouverture client Mail
 async function triggerPcFallback() {
     const modal = document.getElementById('send-confirm-modal');
     if (modal) modal.remove();
@@ -1012,4 +1174,75 @@ async function triggerPcFallback() {
     );
     window.location.href = `mailto:${preparedRecipient}?subject=${subject}&body=${body}`;
 }
-// FIN DU FICHIER APP.JS V8
+
+// =========================================================================
+// GÉNÉRATEUR DE QR CODE & AFFICHE D'ATELIER (AVEC PARAMÈTRE ?v=11 ANTI-CACHE)
+// =========================================================================
+
+function showWorkshopQRCode() {
+    // Le paramètre ?v=11 dans l'URL du QR Code force le navigateur mobile à contourner son ancien cache
+    const appUrl = "https://bkhedher270775-debug.github.io/skin-care-pwa/?v=11";
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(appUrl)}`;
+
+    let modal = document.getElementById('qr-code-modal');
+    if (modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'qr-code-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(9,17,30,0.92);z-index:999999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    modal.innerHTML = `
+        <div style="background:#0F2744;border:2px solid #3B82F6;border-radius:12px;padding:1.5rem;max-width:420px;width:100%;text-align:center;color:#F8FAFC;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+            <div style="font-size:0.75rem;color:#60A5FA;font-weight:bold;letter-spacing:0.5px;margin-bottom:0.25rem;">REAR FUSE PN: C013900001-001 (V11)</div>
+            <h3 style="color:#ffffff;margin-bottom:0.5rem;font-size:1.2rem;">Accès Mobile — Skin Care V11</h3>
+            <p style="font-size:0.85rem;color:#94A3B8;margin-bottom:1rem;">
+                Scannez ce QR Code avec le téléphone pour charger directement la <strong>Version V11</strong> :
+            </p>
+            <div style="background:#ffffff;padding:12px;border-radius:8px;display:inline-block;margin-bottom:1rem;">
+                <img src="${qrApiUrl}" alt="QR Code Skin Care V11" style="width:220px;height:220px;display:block;">
+            </div>
+            <p style="font-size:0.75rem;color:#CBD5E1;margin-bottom:1.2rem;word-break:break-all;">
+                ${appUrl}
+            </p>
+            <div style="display:flex;gap:0.5rem;">
+                <button type="button" onclick="printWorkshopPoster('${qrApiUrl}', '${appUrl}')" style="background:#10B981;color:#fff;padding:0.7rem;border-radius:8px;font-weight:bold;flex:1;border:none;cursor:pointer;">
+                    🖨️ Imprimer Affiche Atelier
+                </button>
+                <button type="button" onclick="document.getElementById('qr-code-modal').remove()" style="background:#475569;color:#fff;padding:0.7rem;border-radius:8px;width:auto;border:none;cursor:pointer;">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function printWorkshopPoster(qrApiUrl, appUrl) {
+    const w = window.open('', '_blank', 'width=800,height=700');
+    if (!w) return alert("Autorisez les fenêtres pop-ups pour imprimer l'affiche.");
+    w.document.write(`
+        <html>
+        <head><title>Affiche Atelier - Skin Care V11</title></head>
+        <body onload="setTimeout(() => window.print(), 400);" style="font-family:Arial,sans-serif;text-align:center;padding:40px;color:#0F2744;">
+            <div style="border:4px solid #0F2744;border-radius:16px;padding:40px;max-width:600px;margin:0 auto;">
+                <div style="background:#0F2744;color:#ffffff;padding:8px 16px;border-radius:20px;display:inline-block;font-weight:bold;font-size:14px;">
+                    REAR FUSE PN: C013900001-001 — VERSION V11
+                </div>
+                <h1 style="font-size:32px;margin:20px 0 10px 0;">APPLICATION SKIN CARE</h1>
+                <h2 style="font-size:18px;color:#475569;margin-top:0;">Inspection & Déclaration des Anomalies de Surface</h2>
+                <div style="margin:30px 0;">
+                    <img src="${qrApiUrl}" style="width:280px;height:280px;border:2px solid #cbd5e1;padding:10px;border-radius:12px;">
+                </div>
+                <p style="font-size:16px;line-height:1.6;color:#1e293b;text-align:left;background:#f1f5f9;padding:20px;border-radius:8px;">
+                    <strong>📱 Instructions Opérateur Production :</strong><br>
+                    1. Ouvrez l'appareil photo de votre téléphone et scannez ce QR Code.<br>
+                    2. Dans le navigateur, ajoutez l'application <strong>sur l'écran d'accueil</strong>.<br>
+                    3. Sélectionnez le SN avion, la pièce, la zone (FR/STRG), prenez les photos (Zoom Out / Zoom In) et envoyez le rapport PDF.
+                </p>
+                <p style="font-size:12px;color:#64748b;margin-top:20px;">Lien direct : ${appUrl}</p>
+            </div>
+        </body>
+        </html>
+    `);
+    w.document.close();
+}
+// FIN DU FICHIER APP.JS V11
