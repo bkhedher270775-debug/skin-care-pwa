@@ -1,7 +1,10 @@
 // =========================================================================
-// APP.JS - Skin Care (Rear Fuse Inspection PN: C013900001-001) - VERSION V11
-// Photos PDF Grand Format (680 x 512 px) + Anti-Cache Mobile + Suppression BDD
+// APP.JS - Skin Care (Rear Fuse Inspection PN: C013900001-001) - VERSION V12
+// Protection par Mot de Passe + Photos PDF 680x512px + Suppression BDD
 // =========================================================================
+
+// MOT DE PASSE PAR DÉFAUT POUR ACCÉDER À L'APPLICATION
+const DEFAULT_APP_PASSWORD = "AERO2026";
 
 const DEFAULT_PARTS = [
     { name: "Top skin", pn: "C01391101-105", category: "skin" },
@@ -45,10 +48,99 @@ let preparedRecipient = "";
 
 document.addEventListener('DOMContentLoaded', () => {
     loadSavedDraft();
-    renderApp();
+    checkAuthenticationAndRender();
 });
 
-// Fonction pour forcer la mise à jour sur téléphone en 1 clic
+// =========================================================================
+// SYSTÈME DE PROTECTION PAR MOT DE PASSE
+// =========================================================================
+
+function getAppPassword() {
+    return localStorage.getItem('skincare_app_password') || DEFAULT_APP_PASSWORD;
+}
+
+function isUserAuthenticated() {
+    return sessionStorage.getItem('skincare_auth_unlocked') === 'true';
+}
+
+function checkAuthenticationAndRender() {
+    if (isUserAuthenticated()) {
+        renderApp();
+    } else {
+        renderLoginScreen();
+    }
+}
+
+function renderLoginScreen() {
+    const container = document.getElementById('inspection-container');
+    if (!container) return;
+
+    container.innerHTML = `
+        <section class="card" style="max-width: 440px; margin: 2rem auto; text-align: center; border: 2px solid #3B82F6; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔒</div>
+            <h2 style="justify-content: center; border-bottom: none; margin-bottom: 0.25rem; font-size: 1.25rem;">
+                Accès Sécurisé — Skin Care
+            </h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+                Veuillez saisir le mot de passe atelier pour accéder aux données et au formulaire d'inspection Rear Fuse.
+            </p>
+            <div class="form-group" style="text-align: left;">
+                <label for="login-password-input">Mot de passe d'accès</label>
+                <input type="password" id="login-password-input" placeholder="Entrez le mot de passe..." onkeydown="if(event.key==='Enter') verifyLoginPassword()">
+                <div id="login-error-msg" class="warning-banner" style="text-align: center;">
+                    Mot de passe incorrect. Accès refusé.
+                </div>
+            </div>
+            <button type="button" class="success" onclick="verifyLoginPassword()" style="margin-top: 0.5rem;">
+                🔓 Déverrouiller l'application
+            </button>
+        </section>
+    `;
+
+    setTimeout(() => {
+        const input = document.getElementById('login-password-input');
+        if (input) input.focus();
+    }, 100);
+}
+
+function verifyLoginPassword() {
+    const input = document.getElementById('login-password-input');
+    const errorMsg = document.getElementById('login-error-msg');
+    if (!input) return;
+
+    if (input.value === getAppPassword()) {
+        sessionStorage.setItem('skincare_auth_unlocked', 'true');
+        renderApp();
+    } else {
+        if (errorMsg) errorMsg.style.display = 'block';
+        input.value = '';
+        input.focus();
+    }
+}
+
+function lockApplication() {
+    closeLiveCamera();
+    sessionStorage.removeItem('skincare_auth_unlocked');
+    renderLoginScreen();
+}
+
+function adminChangePassword() {
+    const newPassInput = document.getElementById('admin-new-password');
+    if (!newPassInput || !newPassInput.value.trim()) {
+        return alert("Veuillez saisir un nouveau mot de passe valide.");
+    }
+    const newPass = newPassInput.value.trim();
+    if (!confirm(`Confirmer le changement du mot de passe d'accès par : "${newPass}" ?`)) return;
+
+    localStorage.setItem('skincare_app_password', newPass);
+    newPassInput.value = '';
+    alert("Le mot de passe a été mis à jour sur cet appareil.");
+}
+
+// =========================================================================
+// FONCTIONS SYSTÈME & BASE DE DONNÉES
+// =========================================================================
+
 async function forceMobileUpdate() {
     if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
@@ -130,6 +222,11 @@ function getStringersList() {
 }
 
 function renderApp() {
+    if (!isUserAuthenticated()) {
+        renderLoginScreen();
+        return;
+    }
+
     const container = document.getElementById('inspection-container');
     if (!container) return;
 
@@ -182,7 +279,10 @@ function renderApp() {
         <section class="card">
             <h2>
                 <span>1. Identification Avion (Rapport Unique par AC)</span>
-                <button type="button" class="secondary small-btn" onclick="resetAircraftReport()">Nouvel Avion</button>
+                <div style="display: flex; gap: 0.4rem;">
+                    <button type="button" class="secondary small-btn" onclick="resetAircraftReport()">Nouvel Avion</button>
+                    <button type="button" class="danger small-btn" onclick="lockApplication()" title="Verrouiller l'application">🔒 Verrouiller</button>
+                </div>
             </h2>
             <div class="form-row">
                 <div class="form-group">
@@ -335,7 +435,7 @@ function renderApp() {
         </section>
 
         <section class="card card-admin">
-            <h2>4. Espace Chef d'Équipe Production / Qualité — Ajout & Suppression Base de Données</h2>
+            <h2>4. Espace Chef d'Équipe Production / Qualité — Base de Données & Sécurité</h2>
             <div class="form-row-3">
                 <div class="dimensions-box" style="margin-bottom:0;">
                     <h3>Pièce / Skin</h3>
@@ -372,15 +472,25 @@ function renderApp() {
                 </div>
             </div>
 
-            <!-- BOUTON QR CODE & AFFICHE ATELIER -->
-            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-                <div>
-                    <strong style="color: #60A5FA; font-size: 0.95rem;">Déploiement Atelier — Accès Rapide Opérateurs (V11)</strong>
-                    <p style="font-size: 0.8rem; color: var(--text-muted);">Générer le QR Code de l'application (avec anti-cache v=11) pour le scanner au téléphone ou imprimer l'affiche.</p>
+            <!-- GESTION DU MOT DE PASSE & QR CODE ATELIER -->
+            <div class="form-row" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color); align-items: center;">
+                <div class="dimensions-box" style="margin-bottom:0;">
+                    <h3>🔑 Modifier le Mot de Passe d'Accès</h3>
+                    <div style="display:flex; gap:0.5rem; margin-top:0.4rem;">
+                        <input type="text" id="admin-new-password" placeholder="Nouveau mot de passe (défaut: AERO2026)">
+                        <button type="button" class="secondary small-btn" onclick="adminChangePassword()">Enregistrer</button>
+                    </div>
                 </div>
-                <button type="button" class="small-btn" style="background-color: #8B5CF6;" onclick="showWorkshopQRCode()">
-                    📱 Afficher / Imprimer QR Code Atelier
-                </button>
+
+                <div class="dimensions-box" style="margin-bottom:0; display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                    <div>
+                        <strong style="color: #60A5FA; font-size: 0.92rem;">QR Code Atelier (V12 Sécurisée)</strong>
+                        <p style="font-size: 0.78rem; color: var(--text-muted);">Demande le mot de passe au scan.</p>
+                    </div>
+                    <button type="button" class="small-btn" style="background-color: #8B5CF6;" onclick="showWorkshopQRCode()">
+                        📱 Afficher / Imprimer QR Code
+                    </button>
+                </div>
             </div>
         </section>
     `;
@@ -964,7 +1074,7 @@ function adminDeleteStringer(index) {
 }
 
 // =========================================================================
-// GÉNÉRATION PDF GRAND FORMAT INGÉNIERIE (PHOTOS EXACTEMENT EN 680 x 512 px)
+// GÉNÉRATION PDF GRAND FORMAT INGÉNIERIE (PHOTOS EN 680 x 512 px)
 // =========================================================================
 
 function generateReportHTML(recipientEmail) {
@@ -1176,12 +1286,11 @@ async function triggerPcFallback() {
 }
 
 // =========================================================================
-// GÉNÉRATEUR DE QR CODE & AFFICHE D'ATELIER (AVEC PARAMÈTRE ?v=11 ANTI-CACHE)
+// GÉNÉRATEUR DE QR CODE & AFFICHE D'ATELIER (AVEC PARAMÈTRE ?v=12)
 // =========================================================================
 
 function showWorkshopQRCode() {
-    // Le paramètre ?v=11 dans l'URL du QR Code force le navigateur mobile à contourner son ancien cache
-    const appUrl = "https://bkhedher270775-debug.github.io/skin-care-pwa/?v=11";
+    const appUrl = "https://bkhedher270775-debug.github.io/skin-care-pwa/?v=12";
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(appUrl)}`;
 
     let modal = document.getElementById('qr-code-modal');
@@ -1192,13 +1301,13 @@ function showWorkshopQRCode() {
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(9,17,30,0.92);z-index:999999;display:flex;align-items:center;justify-content:center;padding:1rem;';
     modal.innerHTML = `
         <div style="background:#0F2744;border:2px solid #3B82F6;border-radius:12px;padding:1.5rem;max-width:420px;width:100%;text-align:center;color:#F8FAFC;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
-            <div style="font-size:0.75rem;color:#60A5FA;font-weight:bold;letter-spacing:0.5px;margin-bottom:0.25rem;">REAR FUSE PN: C013900001-001 (V11)</div>
-            <h3 style="color:#ffffff;margin-bottom:0.5rem;font-size:1.2rem;">Accès Mobile — Skin Care V11</h3>
+            <div style="font-size:0.75rem;color:#60A5FA;font-weight:bold;letter-spacing:0.5px;margin-bottom:0.25rem;">REAR FUSE PN: C013900001-001 (V12 SÉCURISÉE)</div>
+            <h3 style="color:#ffffff;margin-bottom:0.5rem;font-size:1.2rem;">Accès Mobile — Skin Care V12</h3>
             <p style="font-size:0.85rem;color:#94A3B8;margin-bottom:1rem;">
-                Scannez ce QR Code avec le téléphone pour charger directement la <strong>Version V11</strong> :
+                Scannez ce QR Code avec le téléphone (Accès protégé par mot de passe) :
             </p>
             <div style="background:#ffffff;padding:12px;border-radius:8px;display:inline-block;margin-bottom:1rem;">
-                <img src="${qrApiUrl}" alt="QR Code Skin Care V11" style="width:220px;height:220px;display:block;">
+                <img src="${qrApiUrl}" alt="QR Code Skin Care V12" style="width:220px;height:220px;display:block;">
             </div>
             <p style="font-size:0.75rem;color:#CBD5E1;margin-bottom:1.2rem;word-break:break-all;">
                 ${appUrl}
@@ -1221,11 +1330,11 @@ function printWorkshopPoster(qrApiUrl, appUrl) {
     if (!w) return alert("Autorisez les fenêtres pop-ups pour imprimer l'affiche.");
     w.document.write(`
         <html>
-        <head><title>Affiche Atelier - Skin Care V11</title></head>
+        <head><title>Affiche Atelier - Skin Care V12</title></head>
         <body onload="setTimeout(() => window.print(), 400);" style="font-family:Arial,sans-serif;text-align:center;padding:40px;color:#0F2744;">
             <div style="border:4px solid #0F2744;border-radius:16px;padding:40px;max-width:600px;margin:0 auto;">
                 <div style="background:#0F2744;color:#ffffff;padding:8px 16px;border-radius:20px;display:inline-block;font-weight:bold;font-size:14px;">
-                    REAR FUSE PN: C013900001-001 — VERSION V11
+                    REAR FUSE PN: C013900001-001 — ACCÈS SÉCURISÉ
                 </div>
                 <h1 style="font-size:32px;margin:20px 0 10px 0;">APPLICATION SKIN CARE</h1>
                 <h2 style="font-size:18px;color:#475569;margin-top:0;">Inspection & Déclaration des Anomalies de Surface</h2>
@@ -1234,8 +1343,8 @@ function printWorkshopPoster(qrApiUrl, appUrl) {
                 </div>
                 <p style="font-size:16px;line-height:1.6;color:#1e293b;text-align:left;background:#f1f5f9;padding:20px;border-radius:8px;">
                     <strong>📱 Instructions Opérateur Production :</strong><br>
-                    1. Ouvrez l'appareil photo de votre téléphone et scannez ce QR Code.<br>
-                    2. Dans le navigateur, ajoutez l'application <strong>sur l'écran d'accueil</strong>.<br>
+                    1. Scannez ce QR Code avec l'appareil photo du téléphone.<br>
+                    2. Entrez le <strong>mot de passe atelier</strong> pour déverrouiller l'application.<br>
                     3. Sélectionnez le SN avion, la pièce, la zone (FR/STRG), prenez les photos (Zoom Out / Zoom In) et envoyez le rapport PDF.
                 </p>
                 <p style="font-size:12px;color:#64748b;margin-top:20px;">Lien direct : ${appUrl}</p>
@@ -1245,4 +1354,4 @@ function printWorkshopPoster(qrApiUrl, appUrl) {
     `);
     w.document.close();
 }
-// FIN DU FICHIER APP.JS V11
+// FIN DU FICHIER APP.JS V12
