@@ -14,20 +14,19 @@
     <meta name="theme-color" content="#0F2744">
     <link rel="icon" type="image/png" href="icons/icon-192.png">
     
-    <!-- Bibliothèque html2pdf pour la génération des rapports -->
+    <!-- Bibliothèque html2pdf pour la génération des rapports PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
     <div id="app">
         <header>
-            <h1>Skin Care - Rear Fuse Inspection</h1>
-            <p>Documentation aéronautique — PN: C013900001-001</p>
+            <div class="header-badge">REAR FUSE PN: C013900001-001</div>
+            <h1>Skin Care — Inspection Production & Qualité</h1>
+            <p>Documentation des anomalies de surface par numéro de série avion</p>
         </header>
         
-        <main>
-            <div id="inspection-container">
-                <!-- Chargement dynamique via app.js -->
-            </div>
+        <main id="inspection-container">
+            <!-- Interface générée dynamiquement par app.js -->
         </main>
     </div>
 
@@ -39,12 +38,8 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(registration => {
-                        console.log('Service Worker enregistré, scope:', registration.scope);
-                    })
-                    .catch(error => {
-                        console.error('Échec enregistrement Service Worker:', error);
-                    });
+                    .then(reg => console.log('Service Worker actif :', reg.scope))
+                    .catch(err => console.error('Erreur Service Worker :', err));
             });
         }
     </script>

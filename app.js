@@ -1,546 +1,638 @@
-// =================================================================
-// APP.JS - Skin Care (Rear Fuse Inspection) - Complet & Conforme
-// =================================================================
+// =========================================================================
+// APP.JS - Skin Care (Rear Fuse Inspection PN: C013900001-001)
+// Conforme à 100% au cahier des charges Production & Qualité
+// =========================================================================
 
-// Base de données par défaut (extensible par l'administrateur)
-const DB_PARTS = [
-    { name: "Top skin", pn: "C01391101-105", type: "skin" },
-    { name: "Upper R/h skin", pn: "C01391401-103", type: "skin" },
-    { name: "Upper l/h skin", pn: "C01391201-103", type: "skin" },
-    { name: "Lower r/h skin", pn: "C01392401-101", type: "skin" },
-    { name: "Lower l/h skin", pn: "C01392201-101", type: "skin" },
-    { name: "Lower skin", pn: "C01392101-103", type: "skin" },
-    { name: "Cargo service panel", pn: "C01392118-101", type: "panel" },
-    { name: "Water service panel", pn: "C01392415-101", type: "panel" },
-    { name: "Waste service panel", pn: "C01392116-101", type: "panel" }
+// 1. Base de données officielle (6 Skins + 3 Service Panels)
+const DEFAULT_PARTS = [
+    { name: "Top skin", pn: "C01391101-105", category: "skin" },
+    { name: "upper R/h skin", pn: "C01391401-103", category: "skin" },
+    { name: "upper l/h skin", pn: "C01391201-103", category: "skin" },
+    { name: "Lower r/h skin", pn: "C01392401-101", category: "skin" },
+    { name: "Lower l/h skin", pn: "CO1392201-101", category: "skin" },
+    { name: "lower skin", pn: "C01392101-103", category: "skin" },
+    { name: "cargo service panel", pn: "C01392118-101", category: "panel" },
+    { name: "water service panel", pn: "C01392415-101", category: "panel" },
+    { name: "waste service panel", pn: "C01392116-101", category: "panel" }
 ];
 
-const DB_ANOMALIES = [
-    "depression", "bump", "Tool mark", "flashness", "scratch", "Paint", "sealing aérodynamique", "over step"
+// 2. Types d'anomalies officiels
+const DEFAULT_ANOMALIES = [
+    "depression",
+    "bump",
+    "Tool mark",
+    "flashness",
+    "scratch",
+    "Paint",
+    "sealing aérodynamique",
+    "over step"
 ];
 
-// État de l'inspection en cours pour l'avion
-let currentInspection = {
-    serial: "AC 55101",
+// 3. Adresses e-mail par défaut (Chef d'équipe Production & Qualité)
+const DEFAULT_EMAILS = [
+    "chef.production@aerospace-inspection.com",
+    "chef.qualite@aerospace-inspection.com"
+];
+
+// État courant : Un seul rapport par numéro de série d'avion (AC 55xxx)
+let currentAircraftReport = {
+    aircraftSN: "AC 55101",
+    operatorName: "",
     anomalies: []
 };
 
+// Stockage temporaire des photos de l'anomalie en cours de saisie
+let tempZoomOutPhoto = null;
+let tempZoomInPhotos = [];
+
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Application Skin Care initialisée.");
-    loadCustomDatabase();
-    initApp();
+    loadSavedDraft();
+    renderApp();
 });
 
-function initApp() {
-    renderMainInterface();
+// Chargement et sauvegarde automatique du rapport en cours
+function saveDraft() {
+    localStorage.setItem('skincare_current_draft', JSON.stringify(currentAircraftReport));
 }
 
-function renderMainInterface() {
+function loadSavedDraft() {
+    const saved = localStorage.getItem('skincare_current_draft');
+    if (saved) {
+        try {
+            currentAircraftReport = JSON.parse(saved);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+}
+
+// Récupération des listes combinées (Base officielle + Ajouts Chef d'équipe)
+function getPartsList() {
+    const custom = JSON.parse(localStorage.getItem('skincare_custom_parts') || '[]');
+    return [...DEFAULT_PARTS, ...custom];
+}
+
+function getAnomaliesList() {
+    const custom = JSON.parse(localStorage.getItem('skincare_custom_anomalies') || '[]');
+    return [...DEFAULT_ANOMALIES, ...custom];
+}
+
+function getEmailsList() {
+    const custom = JSON.parse(localStorage.getItem('skincare_custom_emails') || '[]');
+    return [...DEFAULT_EMAILS, ...custom];
+}
+
+function getFramesList() {
+    let frames = [];
+    // FR62 jusqu'à FR72 puis FR74 jusqu'à FR79 (FR73 n'existe pas)
+    for (let i = 62; i <= 79; i++) {
+        if (i === 73) continue;
+        frames.push(`FR${i}`);
+    }
+    const customFrames = JSON.parse(localStorage.getItem('skincare_custom_frames') || '[]');
+    return [...frames, ...customFrames];
+}
+
+function getStringersList() {
+    let stringers = [];
+    // STRG 1 à STRG 36 divisés en Left (L) et Right (R)
+    for (let j = 1; j <= 36; j++) {
+        stringers.push({ code: `STRG ${j}L`, num: j, side: 'L' });
+        stringers.push({ code: `STRG ${j}R`, num: j, side: 'R' });
+    }
+    const customStrg = JSON.parse(localStorage.getItem('skincare_custom_stringers') || '[]');
+    return [...stringers, ...customStrg];
+}
+
+// Rendu principal de l'interface
+function renderApp() {
     const container = document.getElementById('inspection-container');
     if (!container) return;
 
-    // Construction des options de Cadres (FR62-72 et FR74-79, sans FR73)
-    let frameOptions = '<option value="">Sélectionner le cadre...</option>';
-    for (let i = 62; i <= 79; i++) {
-        if (i === 73) continue; // FR73 n'existe pas
-        frameOptions += `<option value="FR${i}">FR ${i}</option>`;
-    }
+    const parts = getPartsList();
+    const frames = getFramesList();
+    const stringers = getStringersList();
+    const anomalies = getAnomaliesList();
+    const emails = getEmailsList();
 
-    // Construction des options de Stringers (1 à 36 avec L et R)
-    let stringerOptions = '<option value="">Sélectionner le stringer...</option>';
-    for (let j = 1; j <= 36; j++) {
-        stringerOptions += `<option value="STRG ${j}L">STRG ${j}L (Left)</option>`;
-        stringerOptions += `<option value="STRG ${j}R">STRG ${j}R (Right)</option>`;
-    }
-
-    // Chargement des Part Numbers (avec ajouts personnalisés éventuels)
-    let customParts = JSON.parse(localStorage.getItem('custom_parts') || '[]');
-    let allParts = [...DB_PARTS, ...customParts];
-    let partOptions = '<option value="">Sélectionner la skin ou le panneau...</option>';
-    allParts.forEach(p => {
-        partOptions += `<option value="${p.pn}" data-type="${p.type}">${p.name} (PN: ${p.pn})</option>`;
+    let partOptions = '<option value="">-- Sélectionner la Skin ou le Panneau --</option>';
+    parts.forEach(p => {
+        partOptions += `<option value="${p.pn}" data-name="${p.name}" data-cat="${p.category}">${p.name} — PN: ${p.pn}</option>`;
     });
 
-    // Chargement des types d'anomalies (avec ajouts personnalisés)
-    let customAnom = JSON.parse(localStorage.getItem('custom_anomalies') || '[]');
-    let allAnomalies = [...DB_ANOMALIES, ...customAnom];
-    let anomOptions = '<option value="">Sélectionner le type d\'anomalie...</option>';
-    allAnomalies.forEach(a => {
-        anomOptions += `<option value="${a}">${a}</option>`;
+    let frameOptions = '<option value="">-- Sélectionner Frame (FR) --</option>';
+    frames.forEach(f => {
+        frameOptions += `<option value="${f}">${f}</option>`;
+    });
+
+    let stringerOptions = '<option value="">-- Sélectionner Stringer (STRG L/R) --</option>';
+    stringers.forEach(s => {
+        stringerOptions += `<option value="${s.code}" data-num="${s.num}">${s.code}</option>`;
+    });
+
+    let anomalyOptions = '<option value="">-- Sélectionner le type d\'anomalie --</option>';
+    anomalies.forEach(a => {
+        anomalyOptions += `<option value="${a}">${a}</option>`;
+    });
+
+    let emailOptions = '<option value="">-- Choisir l\'adresse e-mail destinataire --</option>';
+    emails.forEach(e => {
+        emailOptions += `<option value="${e}">${e}</option>`;
     });
 
     container.innerHTML = `
-        <div class="card">
-            <h2>Identification de l'Avion</h2>
-            <div class="form-group">
-                <label for="ac-serial">Numéro de Série Avion (ex: AC 55xxx)</label>
-                <input type="text" id="ac-serial" value="${currentInspection.serial}" placeholder="AC 55xxx">
+        <!-- 1. IDENTIFICATION AVION -->
+        <section class="card">
+            <h2>
+                <span>1. Identification Avion (Rapport Unique par SN)</span>
+                <button type="button" class="secondary small-btn" onclick="resetAircraftReport()">Nouvel Avion</button>
+            </h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ac-serial">Numéro de Série Avion (ex: AC 55xxx)</label>
+                    <input type="text" id="ac-serial" value="${currentAircraftReport.aircraftSN}" placeholder="Ex: AC 55101" onchange="updateAircraftHeader()">
+                </div>
+                <div class="form-group">
+                    <label for="operator-name">Opérateur Production / Matricule</label>
+                    <input type="text" id="operator-name" value="${currentAircraftReport.operatorName}" placeholder="Nom ou matricule opérateur" onchange="updateAircraftHeader()">
+                </div>
             </div>
-        </div>
+        </section>
 
-        <div class="card" style="margin-top: 1rem;">
-            <h2>Enregistrement d'une Anomalie</h2>
-            
+        <!-- 2. SAISIE D'UNE ANOMALIE -->
+        <section class="card">
+            <h2>2. Détection & Saisie d'une Anomalie</h2>
+
             <div class="form-group">
-                <label for="part-select">Skin ou Panneau de service (Part Number)</label>
-                <select id="part-select" onchange="checkPartType()">
+                <label for="part-select">Pièce : Skin ou Service Panel (Part Number)</label>
+                <select id="part-select" onchange="handlePartOrAnomalyChange()">
                     ${partOptions}
                 </select>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="frame-select">Cadre (Frame)</label>
-                    <select id="frame-select" onchange="validateStringerRules()">
+                    <label for="frame-select">Zone — Frame (FR62 à FR72, FR74 à FR79)</label>
+                    <select id="frame-select" onchange="enforceStringerRules()">
                         ${frameOptions}
                     </select>
                 </div>
-                
                 <div class="form-group">
-                    <label for="stringer-select">Stringer (L / R)</label>
+                    <label for="stringer-select">Zone — Stringer (STRG 1L/R à 36L/R)</label>
                     <select id="stringer-select">
                         ${stringerOptions}
                     </select>
-                    <small id="stringer-warning" style="color: var(--accent-red); display: none; margin-top: 0.25rem;">
-                        Règle aéro : Les stringers 24 et 33 (L ou R) sont interdits à partir de FR74.
-                    </small>
+                    <div id="stringer-rule-warning" class="warning-banner">
+                        À partir de FR74, les stringers STRG 24 et STRG 33 (Left et Right) n'existent pas et sont désactivés.
+                    </div>
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="anomaly-type">Type d'Anomalie</label>
-                <select id="anomaly-type" onchange="renderDimensionFields()">
-                    ${anomOptions}
+                <label for="anomaly-select">Type d'Anomalie</label>
+                <select id="anomaly-select" onchange="handlePartOrAnomalyChange()">
+                    ${anomalyOptions}
                 </select>
-                <small id="overstep-warning" style="color: var(--accent-red); display: none; margin-top: 0.25rem;">
-                    Règle : L'anomalie "over step" est strictement réservée aux panneaux de service.
-                </small>
-            </div>
-
-            <!-- Dimensions dynamiques en pouces (inch) -->
-            <div id="dimensions-container" class="form-group" style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px;">
-                <p style="font-size:0.85rem; color:var(--text-muted);">Sélectionnez un type d'anomalie pour saisir les dimensions en pouces (inch).</p>
-            </div>
-
-            <!-- Double Capture Photo -->
-            <div class="form-row" style="margin-top: 1rem;">
-                <div class="form-group">
-                    <label for="photo-zoomout">1. Photo Zone / Vue d'ensemble (Zoom Out)</label>
-                    <input type="file" id="photo-zoomout" accept="image/*" capture="environment" onchange="previewImage(this, 'preview-out')">
-                    <div id="preview-out" style="margin-top: 0.5rem;"></div>
-                </div>
-                <div class="form-group">
-                    <label for="photo-zoomin">2. Photo Anomalie / Rapprochée (Zoom In)</label>
-                    <input type="file" id="photo-zoomin" accept="image/*" capture="environment" onchange="previewImage(this, 'preview-in')">
-                    <div id="preview-in" style="margin-top: 0.5rem;"></div>
+                <div id="overstep-rule-warning" class="warning-banner">
+                    Refusé : L'anomalie "over step" s'applique uniquement aux panneaux de service (Cargo, Water, Waste service panel).
                 </div>
             </div>
 
-            <button type="button" onclick="addAnomalyToInspection()" style="background-color: var(--accent-blue); margin-top: 1rem;">
-                + Ajouter cette anomalie au rapport de l'avion
-            </button>
-        </div>
-
-        <div class="card" style="margin-top: 1.5rem;">
-            <h2>Rapport Global de l'Avion (<span id="anom-count">0</span> anomalie(s) enregistrée(s))</h2>
-            <div id="anomalies-list" style="margin-bottom: 1rem;">
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Aucune anomalie ajoutée pour l'instant.</p>
+            <!-- Zone dynamique des dimensions en pouces (inch) -->
+            <div id="dimensions-wrapper" class="dimensions-box">
+                <p style="font-size: 0.85rem; color: var(--text-muted);">
+                    Sélectionnez un type d'anomalie pour afficher les champs de dimensions (Unité : <strong>inch</strong>).
+                </p>
             </div>
 
-            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                <button type="button" class="success" onclick="generateAndSendReport()" style="flex: 1;">Envoyer le Rapport par E-mail</button>
-                <button type="button" onclick="downloadPDFReport()" style="flex: 1; background-color: #475569;">Imprimer / Télécharger le PDF</button>
-            </div>
-        </div>
-
-        <div class="card" style="margin-top: 1.5rem; border-style: dashed;">
-            <h2>Panneau Admin / Chef d'équipe (Extensions)</h2>
+            <!-- Prise de photos : Zoom Out (Zone) et Zoom In (Anomalie) -->
             <div class="form-row">
                 <div class="form-group">
-                    <input type="text" id="new-part-name" placeholder="Nom de la nouvelle pièce / skin">
-                    <input type="text" id="new-part-pn" placeholder="Part Number (PN)" style="margin-top:5px;">
-                    <select id="new-part-type" style="margin-top:5px;">
-                        <option value="skin">Skin</option>
-                        <option value="panel">Service Panel</option>
-                    </select>
-                    <button type="button" onclick="addNewCustomPart()" style="margin-top:5px; background:#0284c7;">Ajouter Pièce</button>
+                    <label for="photo-zoom-out">Photo 1 : Vue de la Zone (Zoom Out)</label>
+                    <input type="file" id="photo-zoom-out" accept="image/*" capture="environment" onchange="handleZoomOutUpload(this)">
+                    <div id="preview-zoom-out" class="photo-preview-grid"></div>
                 </div>
                 <div class="form-group">
-                    <input type="text" id="new-anom-name" placeholder="Nouveau type d'anomalie">
-                    <button type="button" onclick="addNewCustomAnomaly()" style="margin-top:5px; background:#0284c7;">Ajouter Type d'Anomalie</button>
+                    <label for="photo-zoom-in">Photo(s) 2 : Vue sur l'Anomalie (Zoom In - Plusieurs possibles)</label>
+                    <input type="file" id="photo-zoom-in" accept="image/*" capture="environment" multiple onchange="handleZoomInUpload(this)">
+                    <div id="preview-zoom-in" class="photo-preview-grid"></div>
                 </div>
             </div>
-        </div>
+
+            <button type="button" onclick="addAnomalyToAircraft()" style="margin-top: 0.5rem;">
+                + Ajouter cette anomalie au rapport de l'avion ${currentAircraftReport.aircraftSN}
+            </button>
+        </section>
+
+        <!-- 3. RAPPORT DE L'AVION & ENVOI EMAIL / IMPRESSION -->
+        <section class="card">
+            <h2>
+                <span>3. Rapport Global de l'Avion (${currentAircraftReport.aircraftSN})</span>
+                <span style="font-size: 0.85rem; color: #34D399;">${currentAircraftReport.anomalies.length} anomalie(s)</span>
+            </h2>
+
+            <div id="aircraft-anomalies-list"></div>
+
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1rem 0;">
+
+            <div class="form-group">
+                <label for="recipient-email">Adresse E-mail du Destinataire (Chef d'équipe Production / Qualité)</label>
+                <select id="recipient-email">
+                    ${emailOptions}
+                </select>
+                <div class="email-inline-add">
+                    <input type="email" id="new-email-input" placeholder="L'adresse n'existe pas ? Ajouter un nouvel e-mail ici...">
+                    <button type="button" class="secondary small-btn" onclick="addNewEmail()">+ Ajouter E-mail</button>
+                </div>
+            </div>
+
+            <div class="form-row" style="margin-top: 1rem;">
+                <button type="button" class="success" onclick="sendReportByEmail()">
+                    Envoyer le Rapport avec Photos par E-mail
+                </button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="button" onclick="downloadReportPDF()">Télécharger PDF</button>
+                    <button type="button" class="secondary" onclick="printReportDirectly()">Imprimer le Rapport</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. ESPACE CHEF D'ÉQUIPE PRODUCTION OU QUALITÉ (AJOUTS BDD) -->
+        <section class="card card-admin">
+            <h2>4. Espace Chef d'Équipe Production / Qualité — Ajout Base de Données</h2>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
+                Permet d'ajouter une pièce/skin (Nom + Part Number), un type d'anomalie ou une zone absente de la liste d'origine.
+            </p>
+
+            <div class="form-row-3">
+                <!-- Ajouter une pièce / skin -->
+                <div class="dimensions-box" style="margin-bottom:0;">
+                    <h3>Ajouter Pièce / Skin</h3>
+                    <div class="form-group">
+                        <input type="text" id="admin-part-name" placeholder="Nom (ex: Aft Fairing)">
+                        <input type="text" id="admin-part-pn" placeholder="Part Number (PN)">
+                        <select id="admin-part-cat">
+                            <option value="skin">Catégorie : Skin</option>
+                            <option value="panel">Catégorie : Service Panel</option>
+                        </select>
+                        <button type="button" class="small-btn" onclick="adminAddPart()" style="width:100%;">Ajouter Pièce</button>
+                    </div>
+                </div>
+
+                <!-- Ajouter un type d'anomalie -->
+                <div class="dimensions-box" style="margin-bottom:0;">
+                    <h3>Ajouter Type d'Anomalie</h3>
+                    <div class="form-group">
+                        <input type="text" id="admin-anomaly-name" placeholder="Ex: Delamination">
+                        <button type="button" class="small-btn" onclick="adminAddAnomaly()" style="width:100%; margin-top: 0.5rem;">Ajouter Anomalie</button>
+                    </div>
+                </div>
+
+                <!-- Ajouter une zone (Frame ou Stringer) -->
+                <div class="dimensions-box" style="margin-bottom:0;">
+                    <h3>Ajouter une Zone</h3>
+                    <div class="form-group">
+                        <input type="text" id="admin-zone-frame" placeholder="Nouveau Frame (ex: FR80)">
+                        <button type="button" class="small-btn" onclick="adminAddFrame()" style="width:100%;">+ Ajouter Frame</button>
+                        <input type="text" id="admin-zone-strg" placeholder="Nouveau Stringer (ex: STRG 37L)" style="margin-top:0.4rem;">
+                        <button type="button" class="small-btn" onclick="adminAddStringer()" style="width:100%;">+ Ajouter Stringer</button>
+                    </div>
+                </div>
+            </div>
+        </section>
     `;
-    updateAnomaliesDisplay();
+
+    renderAnomaliesList();
 }
 
-// Validation des règles Stringers (FR74+ interdit 24 et 33)
-function validateStringerRules() {
+// Mise à jour de l'en-tête Avion
+function updateAircraftHeader() {
+    const snInput = document.getElementById('ac-serial');
+    const opInput = document.getElementById('operator-name');
+    if (snInput) currentAircraftReport.aircraftSN = snInput.value.trim() || "AC 55xxx";
+    if (opInput) currentAircraftReport.operatorName = opInput.value.trim();
+    saveDraft();
+    renderApp();
+}
+
+function resetAircraftReport() {
+    const newSN = prompt("Entrez le numéro de série du nouvel avion (ex: AC 55102) :", "AC 55");
+    if (newSN === null) return;
+    currentAircraftReport = {
+        aircraftSN: newSN.trim() || "AC 55xxx",
+        operatorName: currentAircraftReport.operatorName,
+        anomalies: []
+    };
+    saveDraft();
+    renderApp();
+}
+
+// RÈGLE : À partir de FR74, STRG 24 et STRG 33 (Left ou Right) n'existent pas
+function enforceStringerRules() {
     const frameSelect = document.getElementById('frame-select');
     const stringerSelect = document.getElementById('stringer-select');
-    const warning = document.getElementById('stringer-warning');
+    const warning = document.getElementById('stringer-rule-warning');
     if (!frameSelect || !stringerSelect) return;
 
     const frameVal = frameSelect.value;
-    if (!frameVal) return;
-    const frameNum = parseInt(frameVal.replace('FR', ''), 10);
+    const frameNum = parseInt(frameVal.replace(/[^0-9]/g, ''), 10);
+    const isAftOf74 = !isNaN(frameNum) && frameNum >= 74;
 
-    const options = stringerSelect.options;
-    for (let i = 0; i < options.length; i++) {
-        const val = options[i].value;
-        if (!val) continue;
-        // Vérifie si le stringer contient 24 ou 33 (ex: STRG 24L, STRG 33R)
-        const is24Or33 = val.includes(' 24') || val.includes(' 33');
+    let resetTriggered = false;
+    for (let i = 0; i < stringerSelect.options.length; i++) {
+        const opt = stringerSelect.options[i];
+        const num = parseInt(opt.getAttribute('data-num'), 10);
 
-        if (frameNum >= 74 && is24Or33) {
-            options[i].disabled = true;
-            options[i].style.color = '#64748B';
-        } else {
-            options[i].disabled = false;
-            options[i].style.color = '#F8FAFC';
+        if (isAftOf74 && (num === 24 || num === 33)) {
+            opt.disabled = true;
+            opt.textContent = `${opt.value} (Inexistant sur >= FR74)`;
+            if (stringerSelect.value === opt.value) {
+                stringerSelect.value = "";
+                resetTriggered = true;
+            }
+        } else if (opt.value) {
+            opt.disabled = false;
+            opt.textContent = opt.value;
         }
     }
 
-    if (frameNum >= 74 && (stringerSelect.value.includes(' 24') || stringerSelect.value.includes(' 33'))) {
-        stringerSelect.value = "";
-        warning.style.display = 'block';
-    } else {
-        warning.style.display = 'none';
-    }
+    warning.style.display = (isAftOf74 || resetTriggered) ? 'block' : 'none';
 }
 
-// Vérification de la règle "over step" (uniquement sur service panel)
-function checkPartType() {
+// RÈGLE : Over step uniquement sur les panneaux de service + Champs de dimensions en inch
+function handlePartOrAnomalyChange() {
     const partSelect = document.getElementById('part-select');
-    const anomSelect = document.getElementById('anomaly-type');
-    const warning = document.getElementById('overstep-warning');
-    if (!partSelect || !anomSelect) return;
+    const anomalySelect = document.getElementById('anomaly-select');
+    const overstepWarning = document.getElementById('overstep-rule-warning');
+    const dimWrapper = document.getElementById('dimensions-wrapper');
 
-    const selectedOpt = partSelect.options[partSelect.selectedIndex];
-    const partType = selectedOpt.getAttribute('data-type');
+    if (!partSelect || !anomalySelect || !dimWrapper) return;
 
-    if (anomSelect.value === 'over step' && partType !== 'panel') {
-        warning.style.display = 'block';
-        anomSelect.value = "";
-        renderDimensionFields();
+    const selectedPartOpt = partSelect.options[partSelect.selectedIndex];
+    const partCategory = selectedPartOpt ? selectedPartOpt.getAttribute('data-cat') : null;
+    const anomalyType = anomalySelect.value;
+
+    // Vérification stricte pour "over step"
+    if (anomalyType.toLowerCase() === 'over step' && partCategory !== 'panel') {
+        overstepWarning.style.display = 'block';
+        anomalySelect.value = "";
+        dimWrapper.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-muted);">Veuillez choisir un panneau de service pour sélectionner "over step", ou choisissez un autre type d'anomalie.</p>`;
+        return;
     } else {
-        warning.style.display = 'none';
-    }
-}
-
-// Affichage dynamique des champs de dimensions selon l'anomalie (en inch)
-function renderDimensionFields() {
-    const anomType = document.getElementById('anomaly-type').value;
-    const container = document.getElementById('dimensions-container');
-    const partSelect = document.getElementById('part-select');
-    const warning = document.getElementById('overstep-warning');
-
-    if (anomType === 'over step') {
-        const selectedOpt = partSelect.options[partSelect.selectedIndex];
-        if (selectedOpt && selectedOpt.getAttribute('data-type') !== 'panel') {
-            warning.style.display = 'block';
-            document.getElementById('anomaly-type').value = "";
-            container.innerHTML = `<p style="font-size:0.85rem; color:var(--text-muted);">Sélectionnez un type d'anomalie.</p>`;
-            return;
-        } else {
-            warning.style.display = 'none';
-        }
-    } else {
-        warning.style.display = 'none';
+        overstepWarning.style.display = 'none';
     }
 
-    if (!anomType) {
-        container.innerHTML = `<p style="font-size:0.85rem; color:var(--text-muted);">Sélectionnez un type d'anomalie pour saisir les dimensions en pouces (inch).</p>`;
+    if (!anomalyType) {
+        dimWrapper.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-muted);">Sélectionnez un type d'anomalie pour afficher les champs de dimensions (Unité : <strong>inch</strong>).</p>`;
         return;
     }
 
-    if (anomType === 'flashness') {
-        container.innerHTML = `
-            <label>Dimensions - Flashness (Unité : inch)</label>
-            <div class="form-group" style="margin-top:5px;">
-                <label>Depth (+0 / -0) :</label>
-                <input type="text" id="dim-depth" placeholder="Ex: +0.005 ou -0.002 (inch)">
+    // RÈGLE : Dans le cas de flashness, il y a seulement la valeur depth (+ zéro ou - zéro) qui s'affiche
+    if (anomalyType.toLowerCase() === 'flashness') {
+        dimWrapper.innerHTML = `
+            <h3>Dimensions — Flashness (Unité : inch)</h3>
+            <div class="form-row">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="flash-sign">Orientation (+ zéro / - zéro)</label>
+                    <select id="flash-sign">
+                        <option value="+0">+ zéro (Au-dessus / Positif)</option>
+                        <option value="-0">- zéro (En-dessous / Négatif)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="dim-depth">Valeur Depth ( en inch )</label>
+                    <input type="number" step="0.0001" id="dim-depth" placeholder="Ex: 0.005 (inch)">
+                </div>
             </div>
         `;
-    } else if (anomType === 'scratch') {
-        container.innerHTML = `
-            <label>Dimensions & Contrôle - Scratch (Unité : inch)</label>
-            <div class="form-row" style="margin-top:5px;">
-                <input type="text" id="dim-length" placeholder="Longueur (inch)">
-                <input type="text" id="dim-width" placeholder="Largeur (inch)">
-                <input type="text" id="dim-depth" placeholder="Profondeur (inch)">
+    } else if (anomalyType.toLowerCase() === 'scratch') {
+        dimWrapper.innerHTML = `
+            <h3>Dimensions — Scratch (Unité : inch)</h3>
+            <div class="form-row-3">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="dim-length">Longueur / Length (inch)</label>
+                    <input type="number" step="0.001" id="dim-length" placeholder="Ex: 1.250 in">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="dim-width">Largeur / Width (inch)</label>
+                    <input type="number" step="0.001" id="dim-width" placeholder="Ex: 0.050 in">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="dim-depth">Profondeur / Depth (inch)</label>
+                    <input type="number" step="0.0001" id="dim-depth" placeholder="Ex: 0.002 in">
+                </div>
             </div>
-            <div class="form-group" style="margin-top:10px;">
-                <label>Test Clad Validé :</label>
-                <select id="clad-test">
-                    <option value="Positif (+)">Positif (+)</option>
-                    <option value="Négatif (-)">Négatif (-)</option>
-                </select>
+            <div class="form-group" style="margin-top: 0.75rem; margin-bottom:0;">
+                <label for="dim-notes">Observation complémentaire / Test Clad (optionnel)</label>
+                <input type="text" id="dim-notes" placeholder="Précisions sur la rayure...">
             </div>
         `;
     } else {
-        container.innerHTML = `
-            <label>Dimensions - ${anomType} (Unité : inch)</label>
-            <div class="form-row" style="margin-top:5px;">
-                <input type="text" id="dim-length" placeholder="Longueur (inch)">
-                <input type="text" id="dim-width" placeholder="Largeur (inch)">
-                <input type="text" id="dim-depth" placeholder="Profondeur (inch)">
+        dimWrapper.innerHTML = `
+            <h3>Dimensions — ${anomalyType} (Unité : inch)</h3>
+            <div class="form-row-3">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="dim-length">Longueur / Length (inch)</label>
+                    <input type="number" step="0.001" id="dim-length" placeholder="Ex: 2.000 in">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="dim-width">Largeur / Width (inch)</label>
+                    <input type="number" step="0.001" id="dim-width" placeholder="Ex: 1.000 in">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="dim-depth">Profondeur ou Hauteur / Depth (inch)</label>
+                    <input type="number" step="0.0001" id="dim-depth" placeholder="Ex: 0.015 in">
+                </div>
             </div>
         `;
     }
 }
 
-// Aperçu des images
-function previewImage(input, previewId) {
-    const previewContainer = document.getElementById(previewId);
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            previewContainer.innerHTML = `<img src="${e.target.result}" style="max-width:100%; height:120px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color);">`;
+// Gestion des photos (Compression automatique pour un PDF fluide et rapide)
+function compressAndReadImage(file, callback) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const maxDim = 900;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height && width > maxDim) {
+                height *= maxDim / width;
+                width = maxDim;
+            } else if (height > maxDim) {
+                width *= maxDim / height;
+                height = maxDim;
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            callback(canvas.toDataURL('image/jpeg', 0.82));
         };
-        reader.readAsDataURL(input.files[0]);
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function handleZoomOutUpload(input) {
+    const preview = document.getElementById('preview-zoom-out');
+    if (input.files && input.files[0]) {
+        compressAndReadImage(input.files[0], (dataUrl) => {
+            tempZoomOutPhoto = dataUrl;
+            preview.innerHTML = `<img src="${dataUrl}" class="photo-thumb" alt="Zoom Out">`;
+        });
     }
 }
 
-// Ajouter l'anomalie à la liste de l'avion en cours
-function addAnomalyToInspection() {
-    const serialInput = document.getElementById('ac-serial');
+function handleZoomInUpload(input) {
+    const preview = document.getElementById('preview-zoom-in');
+    if (input.files && input.files.length > 0) {
+        Array.from(input.files).forEach(file => {
+            compressAndReadImage(file, (dataUrl) => {
+                tempZoomInPhotos.push(dataUrl);
+                preview.innerHTML = tempZoomInPhotos.map(src => `<img src="${src}" class="photo-thumb" alt="Zoom In">`).join('');
+            });
+        });
+    }
+}
+
+// Ajout d'une anomalie au rapport de l'avion
+function addAnomalyToAircraft() {
+    const snInput = document.getElementById('ac-serial');
+    const opInput = document.getElementById('operator-name');
     const partSelect = document.getElementById('part-select');
     const frameSelect = document.getElementById('frame-select');
     const stringerSelect = document.getElementById('stringer-select');
-    const anomTypeSelect = document.getElementById('anomaly-type');
+    const anomalySelect = document.getElementById('anomaly-select');
 
-    if (!serialInput.value || !partSelect.value || !frameSelect.value || !stringerSelect.value || !anomTypeSelect.value) {
-        alert("Veuillez remplir tous les champs obligatoires (Serial, Part Number, Cadre, Stringer et Type d'anomalie).");
+    if (snInput) currentAircraftReport.aircraftSN = snInput.value.trim() || "AC 55xxx";
+    if (opInput) currentAircraftReport.operatorName = opInput.value.trim();
+
+    if (!partSelect.value || !frameSelect.value || !stringerSelect.value || !anomalySelect.value) {
+        alert("Veuillez sélectionner le Part Number (Skin/Panel), le Frame, le Stringer et le Type d'anomalie.");
         return;
     }
 
-    currentInspection.serial = serialInput.value;
+    const partOpt = partSelect.options[partSelect.selectedIndex];
+    const partName = partOpt.getAttribute('data-name');
+    const partPN = partSelect.value;
+    const anomalyType = anomalySelect.value;
 
-    const imgOut = document.querySelector('#preview-out img');
-    const imgIn = document.querySelector('#preview-in img');
-
-    let dims = {};
-    if (anomTypeSelect.value === 'flashness') {
-        dims.depth = document.getElementById('dim-depth') ? document.getElementById('dim-depth').value : '';
-    } else if (anomTypeSelect.value === 'scratch') {
-        dims.length = document.getElementById('dim-length') ? document.getElementById('dim-length').value : '';
-        dims.width = document.getElementById('dim-width') ? document.getElementById('dim-width').value : '';
-        dims.depth = document.getElementById('dim-depth') ? document.getElementById('dim-depth').value : '';
-        dims.clad = document.getElementById('clad-test') ? document.getElementById('clad-test').value : '';
+    // Récupération des dimensions en inch
+    let dimensionsFormatted = "";
+    if (anomalyType.toLowerCase() === 'flashness') {
+        const sign = document.getElementById('flash-sign') ? document.getElementById('flash-sign').value : '+0';
+        const depth = document.getElementById('dim-depth') ? document.getElementById('dim-depth').value : '0';
+        if (!depth) {
+            alert("Veuillez saisir la valeur Depth (en inch) pour le flashness.");
+            return;
+        }
+        dimensionsFormatted = `Depth : ${sign} / ${depth} inch`;
     } else {
-        dims.length = document.getElementById('dim-length') ? document.getElementById('dim-length').value : '';
-        dims.width = document.getElementById('dim-width') ? document.getElementById('dim-width').value : '';
-        dims.depth = document.getElementById('dim-depth') ? document.getElementById('dim-depth').value : '';
+        const l = document.getElementById('dim-length') ? document.getElementById('dim-length').value : '';
+        const w = document.getElementById('dim-width') ? document.getElementById('dim-width').value : '';
+        const d = document.getElementById('dim-depth') ? document.getElementById('dim-depth').value : '';
+        const notes = document.getElementById('dim-notes') ? document.getElementById('dim-notes').value : '';
+        dimensionsFormatted = `Length: ${l || '0'} in | Width: ${w || '0'} in | Depth: ${d || '0'} in${notes ? ' (' + notes + ')' : ''}`;
     }
 
-    const anomalyItem = {
-        part: partSelect.options[partSelect.selectedIndex].text,
+    const newAnomaly = {
+        id: Date.now(),
+        partName: partName,
+        partPN: partPN,
         frame: frameSelect.value,
         stringer: stringerSelect.value,
-        type: anomTypeSelect.value,
-        dimensions: dims,
-        photoZoomOut: imgOut ? imgOut.src : null,
-        photoZoomIn: imgIn ? imgIn.src : null
+        type: anomalyType,
+        dimensions: dimensionsFormatted,
+        zoomOutPhoto: tempZoomOutPhoto,
+        zoomInPhotos: [...tempZoomInPhotos],
+        timestamp: new Date().toLocaleString()
     };
 
-    currentInspection.anomalies.push(anomalyItem);
-    alert("Anomalie ajoutée avec succès au rapport de l'avion !");
-    updateAnomaliesDisplay();
-    
-    // Réinitialisation partielle du formulaire d'anomalie
-    anomTypeSelect.value = "";
-    document.getElementById('dimensions-containerinnerHTML') = '';
-    document.getElementById('preview-out').innerHTML = '';
-    document.getElementById('preview-in').innerHTML = '';
-    document.getElementById('photo-zoomout').value = '';
-    document.getElementById('photo-zoomin').value = '';
-    renderDimensionFields();
+    currentAircraftReport.anomalies.push(newAnomaly);
+    saveDraft();
+
+    // Réinitialisation des champs d'anomalie pour pouvoir en saisir une autre sur le même avion
+    tempZoomOutPhoto = null;
+    tempZoomInPhotos = [];
+    renderApp();
+    alert(`Anomalie "${anomalyType}" ajoutée au rapport de l'avion ${currentAircraftReport.aircraftSN}.`);
 }
 
-// Mise à jour de l'affichage des anomalies enregistrées
-function updateAnomaliesDisplay() {
-    const listContainer = document.getElementById('anomalies-list');
-    const countSpan = document.getElementById('anom-count');
-    if (!listContainer) return;
+function removeAnomalyFromAircraft(index) {
+    currentAircraftReport.anomalies.splice(index, 1);
+    saveDraft();
+    renderApp();
+}
 
-    countSpan.textContent = currentInspection.anomalies.length;
+function renderAnomaliesList() {
+    const listDiv = document.getElementById('aircraft-anomalies-list');
+    if (!listDiv) return;
 
-    if (currentInspection.anomalies.length === 0) {
-        listContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem;">Aucune anomalie ajoutée pour l'instant.</p>`;
+    if (currentAircraftReport.anomalies.length === 0) {
+        listDiv.innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem;">Aucune anomalie enregistrée pour l'avion ${currentAircraftReport.aircraftSN}.</p>`;
         return;
     }
 
-    let html = '<div style="display: flex; flex-direction: column; gap: 0.75rem;">';
-    currentInspection.anomalies.forEach((item, index) => {
-        html += `
-            <div style="background: #050B14; border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <div>
-                    <strong style="color: var(--accent-blue);">#${index + 1} - Type: ${item.type.toUpperCase()}</strong><br>
-                    <span style="font-size:0.85rem; color:var(--text-muted);">Pièce: ${item.part} | Cadre: ${item.frame} | ${item.stringer}</span>
+    listDiv.innerHTML = currentAircraftReport.anomalies.map((anom, idx) => `
+        <div class="anomaly-item">
+            <div>
+                <strong style="color: #60A5FA; font-size: 1rem;">#${idx + 1} — ${anom.type.toUpperCase()}</strong>
+                <div style="font-size: 0.88rem; margin-top: 0.2rem;">
+                    <strong>Pièce :</strong> ${anom.partName} (PN: ${anom.partPN})<br>
+                    <strong>Zone :</strong> ${anom.frame} / ${anom.stringer}<br>
+                    <strong>Dimensions :</strong> ${anom.dimensions}<br>
+                    <strong>Photos jointes :</strong> ${anom.zoomOutPhoto ? '1 Zoom Out' : '0 Zoom Out'} + ${anom.zoomInPhotos.length} Zoom In
                 </div>
-                <button type="button" onclick="removeAnomaly(${index})" style="background: var(--accent-red); padding: 4px 10px; font-size: 0.8rem; width: auto;">Supprimer</button>
             </div>
-        `;
-    });
-    html += '</div>';
-    listContainer.innerHTML = html;
-}
-
-function removeAnomaly(index) {
-    currentInspection.anomalies.splice(index, 1);
-    updateAnomaliesDisplay();
-}
-
-// Génération du HTML complet du rapport global de l'avion
-function buildGlobalReportHTML() {
-    let anomaliesHTML = '';
-    if (currentInspection.anomalies.length === 0) {
-        anomaliesHTML = '<p>Aucune anomalie enregistrée pour cet avion.</p>';
-    } else {
-        currentInspection.anomalies.forEach((anom, idx) => {
-            let dimText = '';
-            if (anom.type === 'flashness') {
-                dimText = `Depth: ${anom.dimensions.depth || 'N/A'} inch`;
-            } else if (anom.type === 'scratch') {
-                dimText = `L: ${anom.dimensions.length || 'N/A'} in | W: ${anom.dimensions.width || 'N/A'} in | D: ${anom.dimensions.depth || 'N/A'} in | Clad Test: ${anom.dimensions.clad || 'N/A'}`;
-            } else {
-                dimText = `L: ${anom.dimensions.length || 'N/A'} in | W: ${anom.dimensions.width || 'N/A'} in | D: ${anom.dimensions.depth || 'N/A'} in`;
-            }
-
-            anomaliesHTML += `
-                <div style="margin-bottom: 25px; border-bottom: 1px solid #cbd5e1; padding-bottom: 15px;">
-                    <h3 style="color: #0F2744; margin-bottom: 5px;">Anomalie #${idx + 1} : ${anom.type.toUpperCase()}</h3>
-                    <p><strong>Pièce / PN :</strong> ${anom.part}</p>
-                    <p><strong>Localisation :</strong> ${anom.frame} - ${anom.stringer}</p>
-                    <p><strong>Dimensions :</strong> ${dimText}</p>
-                    <div style="display: flex; gap: 10px; margin-top: 10px;">
-                        ${anom.photoZoomOut ? `<div><p style="font-size:12px; margin:2px;">Vue d'ensemble (Zoom Out)</p><img src="${anom.photoZoomOut}" style="max-width:200px; height:auto; border:1px solid #ccc; border-radius:4px;"></div>` : ''}
-                        ${anom.photoZoomIn ? `<div><p style="font-size:12px; margin:2px;">Vue rapprochée (Zoom In)</p><img src="${anom.photoZoomIn}" style="max-width:200px; height:auto; border:1px solid #ccc; border-radius:4px;"></div>` : ''}
-                    </div>
-                </div>
-            `;
-        });
-    }
-
-    return `
-        <div id="pdf-report" style="padding: 25px; background: #ffffff; color: #000000; font-family: Arial, sans-serif;">
-            <h1 style="color: #0F2744; border-bottom: 3px solid #0F2744; padding-bottom: 8px;">Rapport d'Inspection - Skin Care</h1>
-            <p><strong>Référence :</strong> Rear Fuse PN: C013900001-001</p>
-            <p><strong>Numéro de Série Avion (SN) :</strong> ${currentInspection.serial}</p>
-            <p><strong>Date du rapport :</strong> ${new Date().toLocaleString()}</p>
-            <hr style="margin: 20px 0;">
-            <h2 style="color: #1e293b;">Liste des Anomalies Détectées (${currentInspection.anomalies.length})</h2>
-            ${anomaliesHTML}
+            <button type="button" class="danger small-btn" onclick="removeAnomalyFromAircraft(${idx})">Retirer</button>
         </div>
-    `;
+    `).join('');
 }
 
-// Téléchargement / Impression du PDF
-function downloadPDFReport() {
-    if (currentInspection.anomalies.length === 0) {
-        alert("Veuillez ajouter au moins une anomalie avant de générer le rapport.");
+// Ajout d'une nouvelle adresse e-mail si elle n'existe pas
+function addNewEmail() {
+    const input = document.getElementById('new-email-input');
+    if (!input || !input.value.trim()) {
+        alert("Veuillez saisir une adresse e-mail valide.");
         return;
     }
-
-    const reportContainer = document.createElement('div');
-    reportContainer.innerHTML = buildGlobalReportHTML();
-    document.body.appendChild(reportContainer);
-
-    const options = {
-        margin: 10,
-        filename: `Rapport_Inspection_${currentInspection.serial.replace(/\s+/g, '_')}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().from(reportContainer).set(options).save().then(() => {
-        document.body.removeChild(reportContainer);
-    }).catch(err => {
-        console.error("Erreur PDF :", err);
-        if (document.body.contains(reportContainer)) document.body.removeChild(reportContainer);
-    });
-}
-
-// Envoi par e-mail (Web Share API ou Fallback mailto)
-async function generateAndSendReport() {
-    if (currentInspection.anomalies.length === 0) {
-        alert("Veuillez ajouter au moins une anomalie avant d'envoyer le rapport.");
-        return;
+    const email = input.value.trim();
+    let customEmails = JSON.parse(localStorage.getItem('skincare_custom_emails') || '[]');
+    if (!customEmails.includes(email) && !DEFAULT_EMAILS.includes(email)) {
+        customEmails.push(email);
+        localStorage.setItem('skincare_custom_emails', JSON.stringify(customEmails));
     }
-
-    const reportContainer = document.createElement('div');
-    reportContainer.innerHTML = buildGlobalReportHTML();
-    document.body.appendChild(reportContainer);
-
-    const options = {
-        margin: 10,
-        filename: `Rapport_Inspection_${currentInspection.serial.replace(/\s+/g, '_')}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    try {
-        const pdfBlob = await html2pdf().from(reportContainer).set(options).outputPdf('blob');
-        document.body.removeChild(reportContainer);
-
-        const fileName = `Rapport_Inspection_${currentInspection.serial.replace(/\s+/g, '_')}.pdf`;
-        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                title: 'Rapport d\'Inspection - Skin Care',
-                text: `Rapport d'inspection aéronautique (Rear Fuse PN: C013900001-001) pour l'avion ${currentInspection.serial}.`,
-                files: [file]
-            });
-        } else {
-            html2pdf().from(reportContainer).set(options).save();
-            const subject = encodeURIComponent(`Rapport d'Inspection - Skin Care (${currentInspection.serial})`);
-            const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint le rapport d'inspection global pour l'appareil ${currentInspection.serial}.\n\n(Le fichier PDF a été téléchargé sur votre appareil, veuillez le joindre à cet e-mail pour le transmettre au chef d'équipe production et qualité).`);
-            window.location.href = `mailto:?subject=${subject}&body=${body}`;
-        }
-    } catch (err) {
-        console.error("Erreur partage :", err);
-        if (document.body.contains(reportContainer)) document.body.removeChild(reportContainer);
-        alert("Impossible d'envoyer le rapport automatiquement.");
-    }
+    renderApp();
+    document.getElementById('recipient-email').value = email;
 }
 
-// Extensions Admin / Chef d'équipe (Stockage localStorage)
-function loadCustomDatabase() {
-    // Initialisation si besoin
-}
-
-function addNewCustomPart() {
-    const name = document.getElementById('new-part-name').value.trim();
-    const pn = document.getElementById('new-part-pn').value.trim();
-    const type = document.getElementById('new-part-type').value;
-
+// Fonctions d'ajout Administrateur / Chef d'équipe Production & Qualité
+function adminAddPart() {
+    const name = document.getElementById('admin-part-name').value.trim();
+    const pn = document.getElementById('admin-part-pn').value.trim();
+    const category = document.getElementById('admin-part-cat').value;
     if (!name || !pn) {
-        alert("Veuillez remplir le nom et le Part Number (PN) de la pièce.");
+        alert("Veuillez renseigner le nom et le Part Number de la pièce.");
         return;
     }
-
-    let customParts = JSON.parse(localStorage.getItem('custom_parts') || '[]');
-    customParts.push({ name, pn, type });
-    localStorage.setItem('custom_parts', JSON.stringify(customParts));
-    alert("Nouvelle pièce / skin ajoutée à la base de données !");
-    initApp();
+    let custom = JSON.parse(localStorage.getItem('skincare_custom_parts') || '[]');
+    custom.push({ name, pn, category });
+    localStorage.setItem('skincare_custom_parts', JSON.stringify(custom));
+    renderApp();
+    alert(`Pièce "${name} (${pn})" ajoutée à la base de données.`);
 }
 
-function addNewCustomAnomaly() {
-    const anomName = document.getElementById('new-anom-name').value.trim();
-    if (!anomName) {
+function adminAddAnomaly() {
+    const name = document.getElementById('admin-anomaly-name').value.trim();
+    if (!name) {
         alert("Veuillez saisir le nom du type d'anomalie.");
         return;
     }
-
-    let customAnom = JSON.parse(localStorage.getItem('custom_anomalies') || '[]');
-    customAnom.push(anomName);
-    localStorage.setItem('custom_anomalies', JSON.stringify(customAnom));
-    alert("Nouveau type d'anomalie ajouté à la base de données !");
-    initApp();
-}
+    let custom = JSON.parse(localStorage.getItem('skincare_custom_anomalies') || '[]');
+    custom.push(name);
+    localStorage.setItem('skincare_custom_anomalies', JSON.stringify(custom));
+    renderApp();
