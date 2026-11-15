@@ -1,11 +1,12 @@
 {
-  "name": "Skin Care - Rear Fuse Inspection",
-  "short_name": "SkinCare",
-  "description": "Documentation aéronautique des anomalies de surface - Rear Fuse PN: C013900001-001",
-  "start_url": "./index.html",
+  "name": "Skin Care — PreFAL-Rear Inspection (PN: C013900001-001)",
+  "short_name": "Skin Care",
+  "description": "Application d'inspection Production & Qualité PreFAL-Rear — Copyright © 2026 Haithem B.K",
+  "start_url": "./index.html?v=15",
   "display": "standalone",
   "background_color": "#09111E",
   "theme_color": "#0F2744",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "icons/icon-192.png",
