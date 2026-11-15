@@ -1,11 +1,19 @@
-// =========================================================================
-// APP.JS - Skin Care (Rear Fuse Inspection PN: C013900001-001) - VERSION V14
-// Bandeau Technique Incrusté (Photos JPEG Téléchargées + Photos PDF 680x512px)
-// + Renommage Auto JPEG + Protection Mot de Passe + Suppression BDD
-// =========================================================================
+/**
+ * ============================================================================
+ * APPLICATION : Skin Care — Rear Fuse Inspection (PN: C013900001-001)
+ * VERSION     : V15 (Protection Copyright + Bandeau Photo + PDF HD 680x512px)
+ * AUTEUR      : Haithem Ben Khedher
+ * COPYRIGHT   : Copyright (c) 2026 Haithem Ben Khedher. Tous droits réservés.
+ * AVIS LÉGAL  : Ce code source est protégé par les lois sur le droit d'auteur.
+ *               Toute copie, modification, reproduction ou redistribution sans
+ *               l'autorisation écrite de l'auteur est strictement interdite.
+ * ============================================================================
+ */
 
 // MOT DE PASSE PAR DÉFAUT POUR ACCÉDER À L'APPLICATION
 const DEFAULT_APP_PASSWORD = "AERO2026";
+
+const COPYRIGHT_NOTICE_SHORT = "© 2026 Haithem Ben Khedher — Tous droits réservés.";
 
 const DEFAULT_PARTS = [
     { name: "Top skin", pn: "C01391101-105", category: "skin" },
@@ -95,6 +103,10 @@ function renderLoginScreen() {
             <button type="button" class="success" onclick="verifyLoginPassword()" style="margin-top: 0.5rem;">
                 🔓 Déverrouiller l'application
             </button>
+            <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color); font-size: 0.72rem; color: #94A3B8;">
+                ${COPYRIGHT_NOTICE_SHORT}<br>
+                Propriété intellectuelle protégée — Accès réservé au personnel autorisé.
+            </div>
         </section>
     `;
 
@@ -139,7 +151,7 @@ function adminChangePassword() {
 }
 
 // =========================================================================
-// TÉLÉCHARGEMENT, RENOMMAGE AUTO & BANDEAU TECHNIQUE INCRUSTÉ (V14)
+// TÉLÉCHARGEMENT, RENOMMAGE AUTO & BANDEAU TECHNIQUE INCRUSTÉ (V15)
 // Format Bandeau : AC 55xxx | Anomalie #1 : Type | Zone : FR - STRG | Vue
 // Format Fichier : NumAvion_Anomalie_X_Type_FR_STRG_Vue.jpg
 // =========================================================================
@@ -171,7 +183,6 @@ function buildBannerText(acSN, anomNum, anomType, frame, stringer, viewDisplay) 
     return `${snClean} | Anomalie #${anomNum} : ${typeClean} | Zone : ${frClean} - ${strgClean} | ${viewDisplay}`;
 }
 
-// Dessine le bandeau bleu marine semi-transparent avec texte blanc en bas de l'image avant téléchargement
 function triggerImageDownloadWithBanner(dataUrl, fileName, bannerText) {
     if (!dataUrl) return;
     const img = new Image();
@@ -181,22 +192,17 @@ function triggerImageDownloadWithBanner(dataUrl, fileName, bannerText) {
         canvas.height = img.height;
         const ctx = canvas.getContext('2d');
 
-        // 1. Dessiner la photo HD originale
         ctx.drawImage(img, 0, 0);
 
-        // 2. Calculer la hauteur proportionnelle du bandeau (environ 5.5% de la hauteur de l'image)
         const bannerHeight = Math.max(38, Math.round(canvas.height * 0.055));
         const bannerY = canvas.height - bannerHeight;
 
-        // 3. Fond bleu marine semi-transparent
         ctx.fillStyle = 'rgba(11, 29, 54, 0.88)';
         ctx.fillRect(0, bannerY, canvas.width, bannerHeight);
 
-        // Fine ligne de séparation supérieure bleu clair
         ctx.fillStyle = 'rgba(59, 130, 246, 0.7)';
         ctx.fillRect(0, bannerY, canvas.width, Math.max(1, Math.round(canvas.height * 0.002)));
 
-        // 4. Ajuster automatiquement la taille de police pour que le texte tienne toujours en 1 ligne
         let fontSize = Math.max(14, Math.round(bannerHeight * 0.44));
         ctx.font = `600 ${fontSize}px Arial, Helvetica, sans-serif`;
         const maxTextWidth = canvas.width - 32;
@@ -206,13 +212,11 @@ function triggerImageDownloadWithBanner(dataUrl, fileName, bannerText) {
             ctx.font = `600 ${fontSize}px Arial, Helvetica, sans-serif`;
         }
 
-        // 5. Écrire le texte centré en blanc net
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(bannerText, canvas.width / 2, bannerY + (bannerHeight / 2));
 
-        // 6. Télécharger le fichier JPEG final (Qualité 95%)
         const stampedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
         const a = document.createElement('a');
         a.href = stampedDataUrl;
@@ -224,7 +228,6 @@ function triggerImageDownloadWithBanner(dataUrl, fileName, bannerText) {
     img.src = dataUrl;
 }
 
-// Télécharger une photo en cours de saisie dans le formulaire (Section 2)
 function downloadCurrentFormPhoto(type, zoomInIndex = 0) {
     const sn = document.getElementById('ac-serial') ? document.getElementById('ac-serial').value.trim() : currentAircraftReport.aircraftSN;
     const anomNum = editingAnomalyIndex !== -1 ? (editingAnomalyIndex + 1) : (currentAircraftReport.anomalies.length + 1);
@@ -243,7 +246,6 @@ function downloadCurrentFormPhoto(type, zoomInIndex = 0) {
     }
 }
 
-// Télécharger une photo déjà enregistrée dans le rapport de l'avion (Section 3)
 function downloadSavedAnomalyPhoto(anomIndex, type, zoomInIndex = 0) {
     const anom = currentAircraftReport.anomalies[anomIndex];
     if (!anom) return;
@@ -261,7 +263,6 @@ function downloadSavedAnomalyPhoto(anomIndex, type, zoomInIndex = 0) {
     }
 }
 
-// Télécharger toutes les photos d'une anomalie en 1 clic
 function downloadAllPhotosForAnomaly(anomIndex) {
     const anom = currentAircraftReport.anomalies[anomIndex];
     if (!anom) return;
@@ -625,7 +626,7 @@ function renderApp() {
 
                 <div class="dimensions-box" style="margin-bottom:0; display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
                     <div>
-                        <strong style="color: #60A5FA; font-size: 0.92rem;">QR Code Atelier (V14)</strong>
+                        <strong style="color: #60A5FA; font-size: 0.92rem;">QR Code Atelier (V15)</strong>
                         <p style="font-size: 0.78rem; color: var(--text-muted);">Demande le mot de passe au scan.</p>
                     </div>
                     <button type="button" class="small-btn" style="background-color: #8B5CF6;" onclick="showWorkshopQRCode()">
@@ -889,7 +890,6 @@ function compressAndReadImage(file, callback) {
     reader.readAsDataURL(file);
 }
 
-// Aperçu des photos avec bouton 💾 (téléchargement avec bandeau + renommage) et bouton ×
 function renderPhotoPreviews() {
     const previewOut = document.getElementById('preview-zoom-out');
     const previewIn = document.getElementById('preview-zoom-in');
@@ -1244,7 +1244,7 @@ function adminDeleteStringer(index) {
 }
 
 // =========================================================================
-// GÉNÉRATION PDF GRAND FORMAT INGÉNIERIE (PHOTOS 680 x 512 px AVEC BANDEAU)
+// GÉNÉRATION PDF GRAND FORMAT INGÉNIERIE (PHOTOS 680x512 + COPYRIGHT LÉGAL)
 // =========================================================================
 
 function generateReportHTML(recipientEmail) {
@@ -1294,7 +1294,7 @@ function generateReportHTML(recipientEmail) {
 
     return `
         <div id="pdf-content-inner" style="width:740px;padding:15px;background:#ffffff;color:#0f172a;font-family:Arial,sans-serif;">
-            <h1 style="color:#0F2744;font-size:18px;border-bottom:2px solid #0F2744;padding-bottom:6px;margin-top:0;">RAPPORT D'INSPECTION — SKIN CARE (Rear Fuse PN: C013900001-001)</h1>
+            <h1 style="color:#0F2744;font-size:18px;border-bottom:2px solid #0F2744;padding-bottom:6px;margin-top:0;">RAPPORT D'INSPECTION HAUTE RÉSOLUTION — SKIN CARE (Rear Fuse PN: C013900001-001)</h1>
             <p style="font-size:12.5px;margin:8px 0 14px 0;color:#0f172a;">
                 <strong>Avion SN :</strong> ${currentAircraftReport.aircraftSN} &nbsp;|&nbsp;
                 <strong>Opérateur :</strong> ${currentAircraftReport.operatorName || 'N/A'} &nbsp;|&nbsp;
@@ -1302,6 +1302,11 @@ function generateReportHTML(recipientEmail) {
                 <strong>Date :</strong> ${new Date().toLocaleDateString()}
             </p>
             ${rows}
+            <!-- PIED DE PAGE OFFICIEL DE PROPRIÉTÉ INTELLECTUELLE & CONFIDENTIALITÉ -->
+            <div style="margin-top:20px;padding:10px 12px;border-top:2px solid #0F2744;background:#f1f5f9;color:#334155;font-size:10.5px;text-align:center;line-height:1.4;page-break-inside:avoid;">
+                <strong>PROPRIÉTÉ INTELLECTUELLE & CONFIDENTIALITÉ :</strong> Application Skin Care — Copyright © 2026 Haithem Ben Khedher. Tous droits réservés.<br>
+                Document technique confidentiel (Rear Fuse PN: C013900001-001). Toute reproduction, copie ou diffusion non autorisée de cette application ou de ce rapport est strictement interdite.
+            </div>
         </div>`;
 }
 
@@ -1404,7 +1409,7 @@ function showReadyToSendModal(fileName, recipient) {
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(9,17,30,0.9);z-index:999999;display:flex;align-items:center;justify-content:center;padding:1rem;';
     modal.innerHTML = `
         <div style="background:#0F2744;border:2px solid #10B981;border-radius:10px;padding:1.5rem;max-width:460px;width:100%;text-align:center;color:#F8FAFC;box-shadow:0 10px 25px rgba(0,0,0,0.5);">
-            <h3 style="color:#34D399;margin-bottom:0.5rem;font-size:1.15rem;">✅ Rapport PDF (Photos 680×512px + Bandeau) Prêt !</h3>
+            <h3 style="color:#34D399;margin-bottom:0.5rem;font-size:1.15rem;">✅ Rapport PDF Certifié Prêt !</h3>
             <p style="font-size:0.88rem;color:#94A3B8;margin-bottom:1rem;">
                 Fichier : <strong style="color:#fff;">${fileName}</strong><br>
                 Destinataire copié : <strong style="color:#60A5FA;">${recipient}</strong>
@@ -1433,7 +1438,7 @@ async function triggerInstantShare() {
             await navigator.share({
                 files: [preparedPdfFile],
                 title: `Rapport Skin Care - ${currentAircraftReport.aircraftSN}`,
-                text: `À envoyer à : ${preparedRecipient}\nRapport d'inspection Skin Care Rear Fuse (${currentAircraftReport.anomalies.length} anomalie(s)) pour l'avion ${currentAircraftReport.aircraftSN}.`
+                text: `À envoyer à : ${preparedRecipient}\nRapport d'inspection Skin Care Rear Fuse (${currentAircraftReport.anomalies.length} anomalie(s)) pour l'avion ${currentAircraftReport.aircraftSN}.\n${COPYRIGHT_NOTICE_SHORT}`
             });
             return;
         } catch (err) {
@@ -1466,17 +1471,17 @@ async function triggerPcFallback() {
 
     const subject = encodeURIComponent(`Rapport Inspection Skin Care - Avion ${currentAircraftReport.aircraftSN}`);
     const body = encodeURIComponent(
-        `Bonjour,\n\nVeuillez trouver le rapport d'inspection pour l'avion ${currentAircraftReport.aircraftSN} (${currentAircraftReport.anomalies.length} anomalie(s)).\n\n👉 SUR PC : Faites "Ctrl + V" (Coller) ici pour insérer le rapport, ou joignez le fichier "${preparedPdfFile.name}" qui vient d'être téléchargé.`
+        `Bonjour,\n\nVeuillez trouver le rapport d'inspection pour l'avion ${currentAircraftReport.aircraftSN} (${currentAircraftReport.anomalies.length} anomalie(s)).\n\n👉 SUR PC : Faites "Ctrl + V" (Coller) ici pour insérer le rapport, ou joignez le fichier "${preparedPdfFile.name}" qui vient d'être téléchargé.\n\n---\n${COPYRIGHT_NOTICE_SHORT}`
     );
     window.location.href = `mailto:${preparedRecipient}?subject=${subject}&body=${body}`;
 }
 
 // =========================================================================
-// GÉNÉRATEUR DE QR CODE & AFFICHE D'ATELIER (AVEC PARAMÈTRE ?v=14)
+// GÉNÉRATEUR DE QR CODE & AFFICHE D'ATELIER (AVEC PARAMÈTRE ?v=15 & COPYRIGHT)
 // =========================================================================
 
 function showWorkshopQRCode() {
-    const appUrl = "https://bkhedher270775-debug.github.io/skin-care-pwa/?v=14";
+    const appUrl = "https://bkhedher270775-debug.github.io/skin-care-pwa/?v=15";
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(appUrl)}`;
 
     let modal = document.getElementById('qr-code-modal');
@@ -1487,15 +1492,15 @@ function showWorkshopQRCode() {
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(9,17,30,0.92);z-index:999999;display:flex;align-items:center;justify-content:center;padding:1rem;';
     modal.innerHTML = `
         <div style="background:#0F2744;border:2px solid #3B82F6;border-radius:12px;padding:1.5rem;max-width:420px;width:100%;text-align:center;color:#F8FAFC;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
-            <div style="font-size:0.75rem;color:#60A5FA;font-weight:bold;letter-spacing:0.5px;margin-bottom:0.25rem;">REAR FUSE PN: C013900001-001 (V14 SÉCURISÉE)</div>
-            <h3 style="color:#ffffff;margin-bottom:0.5rem;font-size:1.2rem;">Accès Mobile — Skin Care V14</h3>
+            <div style="font-size:0.75rem;color:#60A5FA;font-weight:bold;letter-spacing:0.5px;margin-bottom:0.25rem;">REAR FUSE PN: C013900001-001 (V15)</div>
+            <h3 style="color:#ffffff;margin-bottom:0.5rem;font-size:1.2rem;">Accès Mobile — Skin Care V15</h3>
             <p style="font-size:0.85rem;color:#94A3B8;margin-bottom:1rem;">
                 Scannez ce QR Code avec le téléphone (Accès protégé par mot de passe) :
             </p>
             <div style="background:#ffffff;padding:12px;border-radius:8px;display:inline-block;margin-bottom:1rem;">
-                <img src="${qrApiUrl}" alt="QR Code Skin Care V14" style="width:220px;height:220px;display:block;">
+                <img src="${qrApiUrl}" alt="QR Code Skin Care V15" style="width:220px;height:220px;display:block;">
             </div>
-            <p style="font-size:0.75rem;color:#CBD5E1;margin-bottom:1.2rem;word-break:break-all;">
+            <p style="font-size:0.75rem;color:#CBD5E1;margin-bottom:1rem;word-break:break-all;">
                 ${appUrl}
             </p>
             <div style="display:flex;gap:0.5rem;">
@@ -1505,6 +1510,9 @@ function showWorkshopQRCode() {
                 <button type="button" onclick="document.getElementById('qr-code-modal').remove()" style="background:#475569;color:#fff;padding:0.7rem;border-radius:8px;width:auto;border:none;cursor:pointer;">
                     Fermer
                 </button>
+            </div>
+            <div style="margin-top:0.85rem;font-size:0.7rem;color:#94A3B8;">
+                ${COPYRIGHT_NOTICE_SHORT}
             </div>
         </div>
     `;
@@ -1516,11 +1524,11 @@ function printWorkshopPoster(qrApiUrl, appUrl) {
     if (!w) return alert("Autorisez les fenêtres pop-ups pour imprimer l'affiche.");
     w.document.write(`
         <html>
-        <head><title>Affiche Atelier - Skin Care V14</title></head>
+        <head><title>Affiche Atelier - Skin Care V15</title></head>
         <body onload="setTimeout(() => window.print(), 400);" style="font-family:Arial,sans-serif;text-align:center;padding:40px;color:#0F2744;">
             <div style="border:4px solid #0F2744;border-radius:16px;padding:40px;max-width:600px;margin:0 auto;">
                 <div style="background:#0F2744;color:#ffffff;padding:8px 16px;border-radius:20px;display:inline-block;font-weight:bold;font-size:14px;">
-                    REAR FUSE PN: C013900001-001 — ACCÈS SÉCURISÉ V14
+                    REAR FUSE PN: C013900001-001 — ACCÈS SÉCURISÉ V15
                 </div>
                 <h1 style="font-size:32px;margin:20px 0 10px 0;">APPLICATION SKIN CARE</h1>
                 <h2 style="font-size:18px;color:#475569;margin-top:0;">Inspection & Déclaration des Anomalies de Surface</h2>
@@ -1533,11 +1541,15 @@ function printWorkshopPoster(qrApiUrl, appUrl) {
                     2. Entrez le <strong>mot de passe atelier</strong> pour déverrouiller l'application.<br>
                     3. Sélectionnez le SN avion, la pièce, la zone (FR/STRG), prenez les photos (Zoom Out / Zoom In) et envoyez le rapport PDF.
                 </p>
-                <p style="font-size:12px;color:#64748b;margin-top:20px;">Lien direct : ${appUrl}</p>
+                <p style="font-size:12px;color:#64748b;margin-top:16px;">Lien direct : ${appUrl}</p>
+                <div style="margin-top:20px;padding-top:12px;border-top:1px solid #cbd5e1;font-size:11px;color:#475569;">
+                    <strong>Copyright © 2026 Haithem Ben Khedher — Tous droits réservés.</strong><br>
+                    Application protégée par le droit d'auteur. Usage interne autorisé uniquement.
+                </div>
             </div>
         </body>
         </html>
     `);
     w.document.close();
 }
-// FIN DU FICHIER APP.JS V14
+// FIN DU FICHIER APP.JS V15

@@ -1,11 +1,11 @@
-const CACHE_NAME = 'skin-care-v14';
+const CACHE_NAME = 'skin-care-v15';
 
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './style.css?v=14',
-  './app.js?v=14',
-  './manifest.json?v=14',
+  './style.css?v=15',
+  './app.js?v=15',
+  './manifest.json?v=15',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
@@ -32,7 +32,6 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Stratégie Network First stricte : ignore le cache disque du téléphone (no-store) quand Internet est actif
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request, { cache: 'no-store' })

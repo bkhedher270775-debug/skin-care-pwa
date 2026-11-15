@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Balises anti-cache pour forcer le téléphone à vérifier les mises à jour -->
+    <!-- Protection Droit d'Auteur dans les métadonnées -->
+    <meta name="author" content="Haithem Ben Khedher">
+    <meta name="copyright" content="Copyright (c) 2026 Haithem Ben Khedher. Tous droits réservés.">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Skin Care - Rear Fuse Inspection (V14)</title>
+    <title>Skin Care - Rear Fuse Inspection (V15)</title>
     
-    <!-- PWA Manifest V14 -->
-    <link rel="manifest" href="manifest.json?v=14">
+    <!-- PWA Manifest V15 -->
+    <link rel="manifest" href="manifest.json?v=15">
     
-    <!-- Feuille de style V14 -->
-    <link rel="stylesheet" href="style.css?v=14">
+    <!-- Feuille de style V15 -->
+    <link rel="stylesheet" href="style.css?v=15">
     
     <meta name="theme-color" content="#0F2744">
     <link rel="icon" type="image/png" href="icons/icon-192.png">
@@ -26,7 +28,7 @@
         <header>
             <div style="display:flex; justify-content:center; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
                 <span class="header-badge" style="margin-bottom:0;">REAR FUSE PN: C013900001-001</span>
-                <span class="header-badge" style="margin-bottom:0; background:rgba(16,185,129,0.2); color:#34D399; border-color:#10B981;">VERSION V14</span>
+                <span class="header-badge" style="margin-bottom:0; background:rgba(16,185,129,0.2); color:#34D399; border-color:#10B981;">VERSION V15</span>
                 <button type="button" onclick="forceMobileUpdate()" style="width:auto; padding:0.2rem 0.6rem; font-size:0.75rem; background:#334155; border-radius:999px;">
                     🔄 Actualiser App
                 </button>
@@ -38,19 +40,26 @@
         <main id="inspection-container">
             <!-- Interface générée dynamiquement par app.js -->
         </main>
+
+        <!-- Pied de page officiel de protection Copyright -->
+        <footer style="text-align:center; padding:1.25rem 1rem; margin-top:1.5rem; border-top:1px solid #2A4365; color:#94A3B8; font-size:0.78rem; line-height:1.5;">
+            <strong style="color:#E2E8F0;">Copyright © 2026 Haithem Ben Khedher — Tous droits réservés.</strong><br>
+            Application & Code Source protégés par le droit d'auteur. Usage professionnel autorisé uniquement (Rear Fuse PN: C013900001-001).<br>
+            Toute reproduction, copie ou distribution non autorisée est strictement interdite.
+        </footer>
     </div>
 
-    <!-- Script principal V14 -->
-    <script src="app.js?v=14"></script>
+    <!-- Script principal V15 -->
+    <script src="app.js?v=15"></script>
 
-    <!-- Enregistrement du Service Worker V14 avec rechargement automatique -->
+    <!-- Enregistrement du Service Worker V15 -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=14')
+                navigator.serviceWorker.register('./sw.js?v=15')
                     .then(reg => {
                         reg.update();
-                        console.log('Service Worker V14 actif :', reg.scope);
+                        console.log('Service Worker V15 actif :', reg.scope);
                     })
                     .catch(err => console.error('Erreur Service Worker :', err));
             });
