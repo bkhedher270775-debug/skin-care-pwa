@@ -1,19 +1,19 @@
 /**
  * ============================================================================
- * APPLICATION : Skin Care — Rear Fuse Inspection (PN: C013900001-001)
- * VERSION     : V15 (Protection Copyright + Bandeau Photo + PDF HD 680x512px)
- * AUTEUR      : Haithem Ben Khedher
- * COPYRIGHT   : Copyright (c) 2026 Haithem Ben Khedher. Tous droits réservés.
- * AVIS LÉGAL  : Ce code source est protégé par les lois sur le droit d'auteur.
- *               Toute copie, modification, reproduction ou redistribution sans
- *               l'autorisation écrite de l'auteur est strictement interdite.
+ * APPLICATION : Skin Care — PreFAL-Rear (Rear Fuse PN: C013900001-001)
+ * VERSION     : V15 (Copyright PreFAL-Rear + Bandeau Photo + PDF HD 680x512px)
+ * AUTEUR      : Haithem B.K
+ * COPYRIGHT   : Copyright © 2026. Haithem B.K — Licence d'utilisation interne
+ *               accordée exclusivement au PreFAL-Rear.
+ *               Internal use license granted exclusively to PreFAL-Rear.
  * ============================================================================
  */
 
 // MOT DE PASSE PAR DÉFAUT POUR ACCÉDER À L'APPLICATION
 const DEFAULT_APP_PASSWORD = "AERO2026";
 
-const COPYRIGHT_NOTICE_SHORT = "© 2026 Haithem Ben Khedher — Tous droits réservés.";
+const COPYRIGHT_FR = "Copyright © 2026. Haithem B.K — Licence d'utilisation interne accordée exclusivement au PreFAL-Rear.";
+const COPYRIGHT_EN = "Copyright © 2026. Haithem B.K — Internal use license granted exclusively to PreFAL-Rear. All rights reserved.";
 
 const DEFAULT_PARTS = [
     { name: "Top skin", pn: "C01391101-105", category: "skin" },
@@ -85,10 +85,10 @@ function renderLoginScreen() {
     if (!container) return;
 
     container.innerHTML = `
-        <section class="card" style="max-width: 440px; margin: 2rem auto; text-align: center; border: 2px solid #3B82F6; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        <section class="card" style="max-width: 460px; margin: 2rem auto; text-align: center; border: 2px solid #3B82F6; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
             <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔒</div>
             <h2 style="justify-content: center; border-bottom: none; margin-bottom: 0.25rem; font-size: 1.25rem;">
-                Accès Sécurisé — Skin Care
+                Accès Sécurisé — Skin Care (PreFAL-Rear)
             </h2>
             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
                 Veuillez saisir le mot de passe atelier pour accéder aux données et au formulaire d'inspection Rear Fuse.
@@ -103,9 +103,9 @@ function renderLoginScreen() {
             <button type="button" class="success" onclick="verifyLoginPassword()" style="margin-top: 0.5rem;">
                 🔓 Déverrouiller l'application
             </button>
-            <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color); font-size: 0.72rem; color: #94A3B8;">
-                ${COPYRIGHT_NOTICE_SHORT}<br>
-                Propriété intellectuelle protégée — Accès réservé au personnel autorisé.
+            <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color); font-size: 0.72rem; color: #94A3B8; line-height: 1.45;">
+                <strong style="color:#E2E8F0;">${COPYRIGHT_FR}</strong><br>
+                ${COPYRIGHT_EN}
             </div>
         </section>
     `;
@@ -626,7 +626,7 @@ function renderApp() {
 
                 <div class="dimensions-box" style="margin-bottom:0; display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
                     <div>
-                        <strong style="color: #60A5FA; font-size: 0.92rem;">QR Code Atelier (V15)</strong>
+                        <strong style="color: #60A5FA; font-size: 0.92rem;">QR Code Atelier PreFAL-Rear (V15)</strong>
                         <p style="font-size: 0.78rem; color: var(--text-muted);">Demande le mot de passe au scan.</p>
                     </div>
                     <button type="button" class="small-btn" style="background-color: #8B5CF6;" onclick="showWorkshopQRCode()">
@@ -1244,7 +1244,7 @@ function adminDeleteStringer(index) {
 }
 
 // =========================================================================
-// GÉNÉRATION PDF GRAND FORMAT INGÉNIERIE (PHOTOS 680x512 + COPYRIGHT LÉGAL)
+// GÉNÉRATION PDF GRAND FORMAT INGÉNIERIE (PHOTOS 680x512 + COPYRIGHT PreFAL-Rear)
 // =========================================================================
 
 function generateReportHTML(recipientEmail) {
@@ -1294,7 +1294,7 @@ function generateReportHTML(recipientEmail) {
 
     return `
         <div id="pdf-content-inner" style="width:740px;padding:15px;background:#ffffff;color:#0f172a;font-family:Arial,sans-serif;">
-            <h1 style="color:#0F2744;font-size:18px;border-bottom:2px solid #0F2744;padding-bottom:6px;margin-top:0;">RAPPORT D'INSPECTION HAUTE RÉSOLUTION — SKIN CARE (Rear Fuse PN: C013900001-001)</h1>
+            <h1 style="color:#0F2744;font-size:18px;border-bottom:2px solid #0F2744;padding-bottom:6px;margin-top:0;">RAPPORT D'INSPECTION — SKIN CARE (PreFAL-Rear PN: C013900001-001)</h1>
             <p style="font-size:12.5px;margin:8px 0 14px 0;color:#0f172a;">
                 <strong>Avion SN :</strong> ${currentAircraftReport.aircraftSN} &nbsp;|&nbsp;
                 <strong>Opérateur :</strong> ${currentAircraftReport.operatorName || 'N/A'} &nbsp;|&nbsp;
@@ -1302,10 +1302,11 @@ function generateReportHTML(recipientEmail) {
                 <strong>Date :</strong> ${new Date().toLocaleDateString()}
             </p>
             ${rows}
-            <!-- PIED DE PAGE OFFICIEL DE PROPRIÉTÉ INTELLECTUELLE & CONFIDENTIALITÉ -->
-            <div style="margin-top:20px;padding:10px 12px;border-top:2px solid #0F2744;background:#f1f5f9;color:#334155;font-size:10.5px;text-align:center;line-height:1.4;page-break-inside:avoid;">
-                <strong>PROPRIÉTÉ INTELLECTUELLE & CONFIDENTIALITÉ :</strong> Application Skin Care — Copyright © 2026 Haithem Ben Khedher. Tous droits réservés.<br>
-                Document technique confidentiel (Rear Fuse PN: C013900001-001). Toute reproduction, copie ou diffusion non autorisée de cette application ou de ce rapport est strictement interdite.
+            <!-- PIED DE PAGE OFFICIEL BILINGUE PreFAL-Rear -->
+            <div style="margin-top:20px;padding:10px 12px;border-top:2px solid #0F2744;background:#f1f5f9;color:#334155;font-size:10px;text-align:center;line-height:1.45;page-break-inside:avoid;">
+                <strong>${COPYRIGHT_FR}</strong><br>
+                <strong>${COPYRIGHT_EN}</strong><br>
+                Document technique confidentiel (Rear Fuse PN: C013900001-001). Toute reproduction ou diffusion non autorisée est interdite / Confidential technical document. Unauthorized reproduction is prohibited.
             </div>
         </div>`;
 }
@@ -1409,7 +1410,7 @@ function showReadyToSendModal(fileName, recipient) {
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(9,17,30,0.9);z-index:999999;display:flex;align-items:center;justify-content:center;padding:1rem;';
     modal.innerHTML = `
         <div style="background:#0F2744;border:2px solid #10B981;border-radius:10px;padding:1.5rem;max-width:460px;width:100%;text-align:center;color:#F8FAFC;box-shadow:0 10px 25px rgba(0,0,0,0.5);">
-            <h3 style="color:#34D399;margin-bottom:0.5rem;font-size:1.15rem;">✅ Rapport PDF Certifié Prêt !</h3>
+            <h3 style="color:#34D399;margin-bottom:0.5rem;font-size:1.15rem;">✅ Rapport PDF PreFAL-Rear Prêt !</h3>
             <p style="font-size:0.88rem;color:#94A3B8;margin-bottom:1rem;">
                 Fichier : <strong style="color:#fff;">${fileName}</strong><br>
                 Destinataire copié : <strong style="color:#60A5FA;">${recipient}</strong>
@@ -1437,8 +1438,8 @@ async function triggerInstantShare() {
         try {
             await navigator.share({
                 files: [preparedPdfFile],
-                title: `Rapport Skin Care - ${currentAircraftReport.aircraftSN}`,
-                text: `À envoyer à : ${preparedRecipient}\nRapport d'inspection Skin Care Rear Fuse (${currentAircraftReport.anomalies.length} anomalie(s)) pour l'avion ${currentAircraftReport.aircraftSN}.\n${COPYRIGHT_NOTICE_SHORT}`
+                title: `Rapport Skin Care PreFAL-Rear - ${currentAircraftReport.aircraftSN}`,
+                text: `À envoyer à : ${preparedRecipient}\nRapport d'inspection Skin Care PreFAL-Rear (${currentAircraftReport.anomalies.length} anomalie(s)) pour l'avion ${currentAircraftReport.aircraftSN}.\n${COPYRIGHT_FR}\n${COPYRIGHT_EN}`
             });
             return;
         } catch (err) {
@@ -1456,7 +1457,7 @@ async function triggerPcFallback() {
     try {
         const htmlContent = generateReportHTML(preparedRecipient);
         const blobHtml = new Blob([htmlContent], { type: 'text/html' });
-        const blobText = new Blob([`Rapport Skin Care - ${currentAircraftReport.aircraftSN}`], { type: 'text/plain' });
+        const blobText = new Blob([`Rapport Skin Care PreFAL-Rear - ${currentAircraftReport.aircraftSN}`], { type: 'text/plain' });
         await navigator.clipboard.write([new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })]);
     } catch (e) {
         console.log("Presse-papiers HTML non supporté", e);
@@ -1469,15 +1470,15 @@ async function triggerPcFallback() {
     a.click();
     URL.revokeObjectURL(url);
 
-    const subject = encodeURIComponent(`Rapport Inspection Skin Care - Avion ${currentAircraftReport.aircraftSN}`);
+    const subject = encodeURIComponent(`Rapport Inspection Skin Care (PreFAL-Rear) - Avion ${currentAircraftReport.aircraftSN}`);
     const body = encodeURIComponent(
-        `Bonjour,\n\nVeuillez trouver le rapport d'inspection pour l'avion ${currentAircraftReport.aircraftSN} (${currentAircraftReport.anomalies.length} anomalie(s)).\n\n👉 SUR PC : Faites "Ctrl + V" (Coller) ici pour insérer le rapport, ou joignez le fichier "${preparedPdfFile.name}" qui vient d'être téléchargé.\n\n---\n${COPYRIGHT_NOTICE_SHORT}`
+        `Bonjour,\n\nVeuillez trouver le rapport d'inspection PreFAL-Rear pour l'avion ${currentAircraftReport.aircraftSN} (${currentAircraftReport.anomalies.length} anomalie(s)).\n\n👉 SUR PC : Faites "Ctrl + V" (Coller) ici pour insérer le rapport, ou joignez le fichier "${preparedPdfFile.name}" qui vient d'être téléchargé.\n\n---\n${COPYRIGHT_FR}\n${COPYRIGHT_EN}`
     );
     window.location.href = `mailto:${preparedRecipient}?subject=${subject}&body=${body}`;
 }
 
 // =========================================================================
-// GÉNÉRATEUR DE QR CODE & AFFICHE D'ATELIER (AVEC PARAMÈTRE ?v=15 & COPYRIGHT)
+// GÉNÉRATEUR DE QR CODE & AFFICHE D'ATELIER (V15 PreFAL-Rear)
 // =========================================================================
 
 function showWorkshopQRCode() {
@@ -1491,8 +1492,8 @@ function showWorkshopQRCode() {
     modal.id = 'qr-code-modal';
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(9,17,30,0.92);z-index:999999;display:flex;align-items:center;justify-content:center;padding:1rem;';
     modal.innerHTML = `
-        <div style="background:#0F2744;border:2px solid #3B82F6;border-radius:12px;padding:1.5rem;max-width:420px;width:100%;text-align:center;color:#F8FAFC;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
-            <div style="font-size:0.75rem;color:#60A5FA;font-weight:bold;letter-spacing:0.5px;margin-bottom:0.25rem;">REAR FUSE PN: C013900001-001 (V15)</div>
+        <div style="background:#0F2744;border:2px solid #3B82F6;border-radius:12px;padding:1.5rem;max-width:440px;width:100%;text-align:center;color:#F8FAFC;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+            <div style="font-size:0.75rem;color:#60A5FA;font-weight:bold;letter-spacing:0.5px;margin-bottom:0.25rem;">PreFAL-Rear — PN: C013900001-001 (V15)</div>
             <h3 style="color:#ffffff;margin-bottom:0.5rem;font-size:1.2rem;">Accès Mobile — Skin Care V15</h3>
             <p style="font-size:0.85rem;color:#94A3B8;margin-bottom:1rem;">
                 Scannez ce QR Code avec le téléphone (Accès protégé par mot de passe) :
@@ -1511,8 +1512,8 @@ function showWorkshopQRCode() {
                     Fermer
                 </button>
             </div>
-            <div style="margin-top:0.85rem;font-size:0.7rem;color:#94A3B8;">
-                ${COPYRIGHT_NOTICE_SHORT}
+            <div style="margin-top:0.85rem;font-size:0.68rem;color:#94A3B8;line-height:1.4;">
+                ${COPYRIGHT_FR}<br>${COPYRIGHT_EN}
             </div>
         </div>
     `;
@@ -1524,11 +1525,11 @@ function printWorkshopPoster(qrApiUrl, appUrl) {
     if (!w) return alert("Autorisez les fenêtres pop-ups pour imprimer l'affiche.");
     w.document.write(`
         <html>
-        <head><title>Affiche Atelier - Skin Care V15</title></head>
+        <head><title>Affiche Atelier - Skin Care V15 (PreFAL-Rear)</title></head>
         <body onload="setTimeout(() => window.print(), 400);" style="font-family:Arial,sans-serif;text-align:center;padding:40px;color:#0F2744;">
             <div style="border:4px solid #0F2744;border-radius:16px;padding:40px;max-width:600px;margin:0 auto;">
                 <div style="background:#0F2744;color:#ffffff;padding:8px 16px;border-radius:20px;display:inline-block;font-weight:bold;font-size:14px;">
-                    REAR FUSE PN: C013900001-001 — ACCÈS SÉCURISÉ V15
+                    PreFAL-Rear — REAR FUSE PN: C013900001-001 (V15)
                 </div>
                 <h1 style="font-size:32px;margin:20px 0 10px 0;">APPLICATION SKIN CARE</h1>
                 <h2 style="font-size:18px;color:#475569;margin-top:0;">Inspection & Déclaration des Anomalies de Surface</h2>
@@ -1542,9 +1543,9 @@ function printWorkshopPoster(qrApiUrl, appUrl) {
                     3. Sélectionnez le SN avion, la pièce, la zone (FR/STRG), prenez les photos (Zoom Out / Zoom In) et envoyez le rapport PDF.
                 </p>
                 <p style="font-size:12px;color:#64748b;margin-top:16px;">Lien direct : ${appUrl}</p>
-                <div style="margin-top:20px;padding-top:12px;border-top:1px solid #cbd5e1;font-size:11px;color:#475569;">
-                    <strong>Copyright © 2026 Haithem Ben Khedher — Tous droits réservés.</strong><br>
-                    Application protégée par le droit d'auteur. Usage interne autorisé uniquement.
+                <div style="margin-top:20px;padding-top:12px;border-top:1px solid #cbd5e1;font-size:10.5px;color:#475569;line-height:1.45;">
+                    <strong>${COPYRIGHT_FR}</strong><br>
+                    ${COPYRIGHT_EN}
                 </div>
             </div>
         </body>

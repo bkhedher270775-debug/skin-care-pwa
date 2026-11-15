@@ -1,14 +1,39 @@
-COPYRIGHT ET LICENCE PROPRIÉTAIRE STRICTE
-Application : Skin Care — Rear Fuse Inspection (PN: C013900001-001)
+================================================================================
+LICENCE PROPRIÉTAIRE & DROITS D'AUTEUR / PROPRIETARY LICENSE & COPYRIGHT
+Application : Skin Care — PreFAL-Rear (Rear Fuse PN: C013900001-001)
+================================================================================
 
-Copyright (c) 2026 Haithem Ben Khedher. Tous droits réservés (All Rights Reserved).
+[FRANÇAIS]
 
-AVIS JURIDIQUE :
-Ce logiciel, son code source (HTML, CSS, JavaScript), son architecture, sa structure de rapport et sa documentation associée sont la propriété intellectuelle exclusive de Haithem Ben Khedher, protégés par les lois sur le droit d'auteur et les traités internationaux sur la propriété intellectuelle.
+Copyright © 2026. Haithem B.K — Licence d'utilisation interne accordée exclusivement au PreFAL-Rear. Tous droits réservés.
 
-Aucune licence n'est accordée par la présente. Il est strictement interdit à toute personne ou entité, sans l'autorisation écrite préalable de l'auteur :
+AVIS JURIDIQUE ET PROPRIÉTÉ INTELLECTUELLE :
+Ce logiciel, son code source (HTML, CSS, JavaScript), son architecture, sa logique métier, son système de marquage photo et son générateur de rapports PDF sont la propriété intellectuelle exclusive de Haithem B.K, protégés par les lois sur le droit d'auteur et les traités internationaux sur la propriété intellectuelle.
+
+CONDITIONS D'UTILISATION :
+Une licence d'utilisation interne, non exclusive et révocable, est accordée uniquement pour les opérations d'inspection de production, de qualité et d'ingénierie du secteur PreFAL-Rear (Rear Fuse PN: C013900001-001).
+
+RESTRICTIONS STRICTES :
+Sans l'autorisation écrite préalable de l'auteur (Haithem B.K), il est formellement interdit :
 1. De copier, cloner, dupliquer ou reproduire tout ou partie du code source ou de l'interface.
-2. De modifier, adapter, traduire ou créer des œuvres dérivées basées sur cette application.
-3. De distribuer, publier, sous-licencier, vendre ou exploiter commercialement ce logiciel.
+2. De modifier, adapter, traduire, décompiler ou créer des œuvres dérivées basées sur cette application.
+3. De distribuer, transférer à un autre secteur, publier, sous-licencier, vendre ou exploiter commercialement ce logiciel.
 
-L'accès à cette application est strictement réservé aux opérateurs, chefs d'équipe, les superviseurs et ingénieurs dûment autorisés dans le cadre des opérations d'inspection aéronautique.
+--------------------------------------------------------------------------------
+
+[ENGLISH]
+
+Copyright © 2026. Haithem B.K — Internal use license granted exclusively to PreFAL-Rear. All rights reserved.
+
+LEGAL NOTICE AND INTELLECTUAL PROPERTY:
+This software, its source code (HTML, CSS, JavaScript), architecture, business logic, photo watermarking system, and PDF report generator are the exclusive intellectual property of Haithem B.K, protected by copyright laws and international intellectual property treaties.
+
+TERMS OF USE:
+A non-exclusive, revocable internal use license is granted solely for production, quality, and engineering inspection operations within the PreFAL-Rear sector (Rear Fuse PN: C013900001-001).
+
+STRICT RESTRICTIONS:
+Without the prior written permission of the author (Haithem B.K), it is strictly prohibited to:
+1. Copy, clone, duplicate, or reproduce all or any part of the source code or user interface.
+2. Modify, adapt, translate, decompile, or create derivative works based on this application.
+3. Distribute, transfer to another department, publish, sublicense, sell, or commercially exploit this software.
+================================================================================
