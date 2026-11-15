@@ -1,6 +1,7 @@
 // =========================================================================
-// APP.JS - Skin Care (Rear Fuse Inspection PN: C013900001-001) - VERSION V12
-// Protection par Mot de Passe + Photos PDF 680x512px + Suppression BDD
+// APP.JS - Skin Care (Rear Fuse Inspection PN: C013900001-001) - VERSION V13
+// Téléchargement Photo avec Renommage Auto (Avion + #Anomalie + Type + FR + STRG)
+// + Protection Mot de Passe + Photos PDF 680x512px + Suppression BDD
 // =========================================================================
 
 // MOT DE PASSE PAR DÉFAUT POUR ACCÉDER À L'APPLICATION
@@ -135,6 +136,90 @@ function adminChangePassword() {
     localStorage.setItem('skincare_app_password', newPass);
     newPassInput.value = '';
     alert("Le mot de passe a été mis à jour sur cet appareil.");
+}
+
+// =========================================================================
+// TÉLÉCHARGEMENT & RENOMMAGE AUTOMATIQUE DES PHOTOS
+// Format : NumAvion_AnomalieX_Type_FR_STRG_Vue.jpg
+// =========================================================================
+
+function sanitizeFileNamePart(text) {
+    if (!text) return "NA";
+    return text.toString()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Retire les accents
+        .replace(/[^a-zA-Z0-9_-]/g, "_")                  // Remplace espaces et caractères spéciaux par _
+        .replace(/_+/g, "_")                              // Évite les ___ multiples
+        .replace(/^_|_$/g, "");
+}
+
+function buildPhotoFileName(acSN, anomNum, anomType, frame, stringer, viewLabel) {
+    const pSN = sanitizeFileNamePart(acSN || currentAircraftReport.aircraftSN || "AC");
+    const pNum = `Anomalie_${anomNum}`;
+    const pType = sanitizeFileNamePart(anomType || "Type");
+    const pFr = sanitizeFileNamePart(frame || "FR");
+    const pStrg = sanitizeFileNamePart(stringer || "STRG");
+    const pView = sanitizeFileNamePart(viewLabel || "Photo");
+    return `${pSN}_${pNum}_${pType}_${pFr}_${pStrg}_${pView}.jpg`;
+}
+
+function triggerImageDownload(dataUrl, fileName) {
+    if (!dataUrl) return;
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+// Télécharger une photo en cours de saisie dans le formulaire (Section 2)
+function downloadCurrentFormPhoto(type, zoomInIndex = 0) {
+    const sn = document.getElementById('ac-serial') ? document.getElementById('ac-serial').value.trim() : currentAircraftReport.aircraftSN;
+    const anomNum = editingAnomalyIndex !== -1 ? (editingAnomalyIndex + 1) : (currentAircraftReport.anomalies.length + 1);
+    const anomType = document.getElementById('anomaly-select') ? (document.getElementById('anomaly-select').value || 'Anomalie') : 'Anomalie';
+    const frame = document.getElementById('frame-select') ? (document.getElementById('frame-select').value || 'FR') : 'FR';
+    const stringer = document.getElementById('stringer-select') ? (document.getElementById('stringer-select').value || 'STRG') : 'STRG';
+
+    if (type === 'out' && tempZoomOutPhoto) {
+        const fileName = buildPhotoFileName(sn, anomNum, anomType, frame, stringer, 'ZoomOut');
+        triggerImageDownload(tempZoomOutPhoto, fileName);
+    } else if (type === 'in' && tempZoomInPhotos[zoomInIndex]) {
+        const fileName = buildPhotoFileName(sn, anomNum, anomType, frame, stringer, `ZoomIn_${zoomInIndex + 1}`);
+        triggerImageDownload(tempZoomInPhotos[zoomInIndex], fileName);
+    }
+}
+
+// Télécharger une photo déjà enregistrée dans le rapport de l'avion (Section 3)
+function downloadSavedAnomalyPhoto(anomIndex, type, zoomInIndex = 0) {
+    const anom = currentAircraftReport.anomalies[anomIndex];
+    if (!anom) return;
+    const sn = currentAircraftReport.aircraftSN;
+    const anomNum = anomIndex + 1;
+
+    if (type === 'out' && anom.zoomOutPhoto) {
+        const fileName = buildPhotoFileName(sn, anomNum, anom.type, anom.frame, anom.stringer, 'ZoomOut');
+        triggerImageDownload(anom.zoomOutPhoto, fileName);
+    } else if (type === 'in' && anom.zoomInPhotos && anom.zoomInPhotos[zoomInIndex]) {
+        const fileName = buildPhotoFileName(sn, anomNum, anom.type, anom.frame, anom.stringer, `ZoomIn_${zoomInIndex + 1}`);
+        triggerImageDownload(anom.zoomInPhotos[zoomInIndex], fileName);
+    }
+}
+
+// Télécharger toutes les photos d'une anomalie en 1 clic
+function downloadAllPhotosForAnomaly(anomIndex) {
+    const anom = currentAircraftReport.anomalies[anomIndex];
+    if (!anom) return;
+    let delay = 0;
+    if (anom.zoomOutPhoto) {
+        setTimeout(() => downloadSavedAnomalyPhoto(anomIndex, 'out'), delay);
+        delay += 300;
+    }
+    if (anom.zoomInPhotos && anom.zoomInPhotos.length > 0) {
+        anom.zoomInPhotos.forEach((_, idx) => {
+            setTimeout(() => downloadSavedAnomalyPhoto(anomIndex, 'in', idx), delay);
+            delay += 300;
+        });
+    }
 }
 
 // =========================================================================
@@ -484,7 +569,7 @@ function renderApp() {
 
                 <div class="dimensions-box" style="margin-bottom:0; display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
                     <div>
-                        <strong style="color: #60A5FA; font-size: 0.92rem;">QR Code Atelier (V12 Sécurisée)</strong>
+                        <strong style="color: #60A5FA; font-size: 0.92rem;">QR Code Atelier (V13)</strong>
                         <p style="font-size: 0.78rem; color: var(--text-muted);">Demande le mot de passe au scan.</p>
                     </div>
                     <button type="button" class="small-btn" style="background-color: #8B5CF6;" onclick="showWorkshopQRCode()">
@@ -748,6 +833,7 @@ function compressAndReadImage(file, callback) {
     reader.readAsDataURL(file);
 }
 
+// Aperçu des photos avec bouton 💾 de téléchargement renommé et bouton × de suppression
 function renderPhotoPreviews() {
     const previewOut = document.getElementById('preview-zoom-out');
     const previewIn = document.getElementById('preview-zoom-in');
@@ -755,7 +841,8 @@ function renderPhotoPreviews() {
         previewOut.innerHTML = tempZoomOutPhoto
             ? `<div style="position:relative;display:inline-block;">
                  <img src="${tempZoomOutPhoto}" class="photo-thumb" alt="Zoom Out">
-                 <button type="button" onclick="removeZoomOutPhoto()" style="position:absolute;top:2px;right:2px;background:#EF4444;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:12px;padding:0;line-height:22px;">×</button>
+                 <button type="button" onclick="downloadCurrentFormPhoto('out')" title="Télécharger la photo renommée" style="position:absolute;bottom:2px;left:2px;background:#10B981;color:#fff;border:none;border-radius:4px;width:24px;height:22px;font-size:12px;padding:0;line-height:22px;cursor:pointer;">💾</button>
+                 <button type="button" onclick="removeZoomOutPhoto()" title="Supprimer" style="position:absolute;top:2px;right:2px;background:#EF4444;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:12px;padding:0;line-height:22px;cursor:pointer;">×</button>
                </div>`
             : '';
     }
@@ -763,7 +850,8 @@ function renderPhotoPreviews() {
         previewIn.innerHTML = tempZoomInPhotos.map((src, idx) => `
             <div style="position:relative;display:inline-block;">
                 <img src="${src}" class="photo-thumb" alt="Zoom In">
-                <button type="button" onclick="removeZoomInPhoto(${idx})" style="position:absolute;top:2px;right:2px;background:#EF4444;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:12px;padding:0;line-height:22px;">×</button>
+                <button type="button" onclick="downloadCurrentFormPhoto('in', ${idx})" title="Télécharger la photo renommée" style="position:absolute;bottom:2px;left:2px;background:#10B981;color:#fff;border:none;border-radius:4px;width:24px;height:22px;font-size:12px;padding:0;line-height:22px;cursor:pointer;">💾</button>
+                <button type="button" onclick="removeZoomInPhoto(${idx})" title="Supprimer" style="position:absolute;top:2px;right:2px;background:#EF4444;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:12px;padding:0;line-height:22px;cursor:pointer;">×</button>
             </div>
         `).join('');
     }
@@ -947,22 +1035,49 @@ function renderAnomaliesList() {
         listDiv.innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem;">Aucune anomalie enregistrée pour l'avion ${currentAircraftReport.aircraftSN}.</p>`;
         return;
     }
-    listDiv.innerHTML = currentAircraftReport.anomalies.map((anom, idx) => `
+    listDiv.innerHTML = currentAircraftReport.anomalies.map((anom, idx) => {
+        const hasOut = !!anom.zoomOutPhoto;
+        const inCount = anom.zoomInPhotos ? anom.zoomInPhotos.length : 0;
+
+        // Création des boutons de téléchargement photo renommée pour chaque anomalie
+        let photoDownloadButtons = '';
+        if (hasOut) {
+            photoDownloadButtons += `<button type="button" class="small-btn" style="background:#0D9488;padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="downloadSavedAnomalyPhoto(${idx}, 'out')">💾 Zoom Out</button>`;
+        }
+        if (inCount > 0) {
+            anom.zoomInPhotos.forEach((_, zIdx) => {
+                photoDownloadButtons += `<button type="button" class="small-btn" style="background:#0284C7;padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="downloadSavedAnomalyPhoto(${idx}, 'in', ${zIdx})">💾 Zoom In #${zIdx + 1}</button>`;
+            });
+        }
+        if ((hasOut ? 1 : 0) + inCount > 1) {
+            photoDownloadButtons += `<button type="button" class="small-btn" style="background:#10B981;padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="downloadAllPhotosForAnomaly(${idx})">📥 Toutes les photos</button>`;
+        }
+
+        const sampleName = buildPhotoFileName(currentAircraftReport.aircraftSN, idx + 1, anom.type, anom.frame, anom.stringer, '...');
+
+        return `
         <div class="anomaly-item" style="${editingAnomalyIndex === idx ? 'border-color: #F59E0B;' : ''}">
-            <div>
+            <div style="flex:1;">
                 <strong style="color: #60A5FA;">#${idx + 1} — ${anom.type.toUpperCase()}</strong>
                 <div style="font-size: 0.85rem; margin-top: 0.2rem;">
                     <strong>Pièce :</strong> ${anom.partName} (PN: ${anom.partPN}) | <strong>Zone :</strong> ${anom.frame} / ${anom.stringer}<br>
                     <strong>Dimensions :</strong> ${anom.dimensions}
                     ${anom.comment ? `<br><strong>Commentaire :</strong> <em>${anom.comment}</em>` : ''}
                 </div>
+                ${photoDownloadButtons ? `
+                    <div style="margin-top:0.45rem;display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;">
+                        <span style="font-size:0.75rem;color:#94A3B8;">Télécharger photo(s) (${sampleName}) :</span>
+                        ${photoDownloadButtons}
+                    </div>
+                ` : ''}
             </div>
-            <div style="display: flex; gap: 0.5rem;">
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <button type="button" class="secondary small-btn" onclick="editAnomalyFromAircraft(${idx})" style="background-color: #F59E0B; color: #000;">Modifier</button>
                 <button type="button" class="danger small-btn" onclick="removeAnomalyFromAircraft(${idx})">Retirer</button>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // =========================================================================
@@ -1286,11 +1401,11 @@ async function triggerPcFallback() {
 }
 
 // =========================================================================
-// GÉNÉRATEUR DE QR CODE & AFFICHE D'ATELIER (AVEC PARAMÈTRE ?v=12)
+// GÉNÉRATEUR DE QR CODE & AFFICHE D'ATELIER (AVEC PARAMÈTRE ?v=13)
 // =========================================================================
 
 function showWorkshopQRCode() {
-    const appUrl = "https://bkhedher270775-debug.github.io/skin-care-pwa/?v=12";
+    const appUrl = "https://bkhedher270775-debug.github.io/skin-care-pwa/?v=13";
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(appUrl)}`;
 
     let modal = document.getElementById('qr-code-modal');
@@ -1301,13 +1416,13 @@ function showWorkshopQRCode() {
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(9,17,30,0.92);z-index:999999;display:flex;align-items:center;justify-content:center;padding:1rem;';
     modal.innerHTML = `
         <div style="background:#0F2744;border:2px solid #3B82F6;border-radius:12px;padding:1.5rem;max-width:420px;width:100%;text-align:center;color:#F8FAFC;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
-            <div style="font-size:0.75rem;color:#60A5FA;font-weight:bold;letter-spacing:0.5px;margin-bottom:0.25rem;">REAR FUSE PN: C013900001-001 (V12 SÉCURISÉE)</div>
-            <h3 style="color:#ffffff;margin-bottom:0.5rem;font-size:1.2rem;">Accès Mobile — Skin Care V12</h3>
+            <div style="font-size:0.75rem;color:#60A5FA;font-weight:bold;letter-spacing:0.5px;margin-bottom:0.25rem;">REAR FUSE PN: C013900001-001 (V13 SÉCURISÉE)</div>
+            <h3 style="color:#ffffff;margin-bottom:0.5rem;font-size:1.2rem;">Accès Mobile — Skin Care V13</h3>
             <p style="font-size:0.85rem;color:#94A3B8;margin-bottom:1rem;">
                 Scannez ce QR Code avec le téléphone (Accès protégé par mot de passe) :
             </p>
             <div style="background:#ffffff;padding:12px;border-radius:8px;display:inline-block;margin-bottom:1rem;">
-                <img src="${qrApiUrl}" alt="QR Code Skin Care V12" style="width:220px;height:220px;display:block;">
+                <img src="${qrApiUrl}" alt="QR Code Skin Care V13" style="width:220px;height:220px;display:block;">
             </div>
             <p style="font-size:0.75rem;color:#CBD5E1;margin-bottom:1.2rem;word-break:break-all;">
                 ${appUrl}
@@ -1330,11 +1445,11 @@ function printWorkshopPoster(qrApiUrl, appUrl) {
     if (!w) return alert("Autorisez les fenêtres pop-ups pour imprimer l'affiche.");
     w.document.write(`
         <html>
-        <head><title>Affiche Atelier - Skin Care V12</title></head>
+        <head><title>Affiche Atelier - Skin Care V13</title></head>
         <body onload="setTimeout(() => window.print(), 400);" style="font-family:Arial,sans-serif;text-align:center;padding:40px;color:#0F2744;">
             <div style="border:4px solid #0F2744;border-radius:16px;padding:40px;max-width:600px;margin:0 auto;">
                 <div style="background:#0F2744;color:#ffffff;padding:8px 16px;border-radius:20px;display:inline-block;font-weight:bold;font-size:14px;">
-                    REAR FUSE PN: C013900001-001 — ACCÈS SÉCURISÉ
+                    REAR FUSE PN: C013900001-001 — ACCÈS SÉCURISÉ V13
                 </div>
                 <h1 style="font-size:32px;margin:20px 0 10px 0;">APPLICATION SKIN CARE</h1>
                 <h2 style="font-size:18px;color:#475569;margin-top:0;">Inspection & Déclaration des Anomalies de Surface</h2>
@@ -1354,4 +1469,4 @@ function printWorkshopPoster(qrApiUrl, appUrl) {
     `);
     w.document.close();
 }
-// FIN DU FICHIER APP.JS V12
+// FIN DU FICHIER APP.JS V13
