@@ -1294,7 +1294,7 @@ function generateReportHTML(recipientEmail) {
 
     return `
         <div id="pdf-content-inner" style="width:740px;padding:15px;background:#ffffff;color:#0f172a;font-family:Arial,sans-serif;">
-            <h1 style="color:#0F2744;font-size:18px;border-bottom:2px solid #0F2744;padding-bottom:6px;margin-top:0;">RAPPORT D'INSPECTION HAUTE RÉSOLUTION — SKIN CARE (Rear Fuse PN: C013900001-001)</h1>
+            <h1 style="color:#0F2744;font-size:18px;border-bottom:2px solid #0F2744;padding-bottom:6px;margin-top:0;">RAPPORT D'INSPECTION — SKIN CARE (Rear Fuse PN: C013900001-001)</h1>
             <p style="font-size:12.5px;margin:8px 0 14px 0;color:#0f172a;">
                 <strong>Avion SN :</strong> ${currentAircraftReport.aircraftSN} &nbsp;|&nbsp;
                 <strong>Opérateur :</strong> ${currentAircraftReport.operatorName || 'N/A'} &nbsp;|&nbsp;
