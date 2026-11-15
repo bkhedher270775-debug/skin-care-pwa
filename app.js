@@ -1,7 +1,7 @@
 // =========================================================================
-// APP.JS - Skin Care (Rear Fuse Inspection PN: C013900001-001) - VERSION V13
-// Téléchargement Photo avec Renommage Auto (Avion + #Anomalie + Type + FR + STRG)
-// + Protection Mot de Passe + Photos PDF 680x512px + Suppression BDD
+// APP.JS - Skin Care (Rear Fuse Inspection PN: C013900001-001) - VERSION V14
+// Bandeau Technique Incrusté (Photos JPEG Téléchargées + Photos PDF 680x512px)
+// + Renommage Auto JPEG + Protection Mot de Passe + Suppression BDD
 // =========================================================================
 
 // MOT DE PASSE PAR DÉFAUT POUR ACCÉDER À L'APPLICATION
@@ -139,16 +139,17 @@ function adminChangePassword() {
 }
 
 // =========================================================================
-// TÉLÉCHARGEMENT & RENOMMAGE AUTOMATIQUE DES PHOTOS
-// Format : NumAvion_AnomalieX_Type_FR_STRG_Vue.jpg
+// TÉLÉCHARGEMENT, RENOMMAGE AUTO & BANDEAU TECHNIQUE INCRUSTÉ (V14)
+// Format Bandeau : AC 55xxx | Anomalie #1 : Type | Zone : FR - STRG | Vue
+// Format Fichier : NumAvion_Anomalie_X_Type_FR_STRG_Vue.jpg
 // =========================================================================
 
 function sanitizeFileNamePart(text) {
     if (!text) return "NA";
     return text.toString()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Retire les accents
-        .replace(/[^a-zA-Z0-9_-]/g, "_")                  // Remplace espaces et caractères spéciaux par _
-        .replace(/_+/g, "_")                              // Évite les ___ multiples
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9_-]/g, "_")
+        .replace(/_+/g, "_")
         .replace(/^_|_$/g, "");
 }
 
@@ -162,14 +163,65 @@ function buildPhotoFileName(acSN, anomNum, anomType, frame, stringer, viewLabel)
     return `${pSN}_${pNum}_${pType}_${pFr}_${pStrg}_${pView}.jpg`;
 }
 
-function triggerImageDownload(dataUrl, fileName) {
+function buildBannerText(acSN, anomNum, anomType, frame, stringer, viewDisplay) {
+    const snClean = (acSN || currentAircraftReport.aircraftSN || "AC 55XXX").trim();
+    const typeClean = (anomType || "Anomalie").trim();
+    const frClean = (frame || "FR--").trim();
+    const strgClean = (stringer || "STRG--").trim();
+    return `${snClean} | Anomalie #${anomNum} : ${typeClean} | Zone : ${frClean} - ${strgClean} | ${viewDisplay}`;
+}
+
+// Dessine le bandeau bleu marine semi-transparent avec texte blanc en bas de l'image avant téléchargement
+function triggerImageDownloadWithBanner(dataUrl, fileName, bannerText) {
     if (!dataUrl) return;
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const img = new Image();
+    img.onload = function() {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+
+        // 1. Dessiner la photo HD originale
+        ctx.drawImage(img, 0, 0);
+
+        // 2. Calculer la hauteur proportionnelle du bandeau (environ 5.5% de la hauteur de l'image)
+        const bannerHeight = Math.max(38, Math.round(canvas.height * 0.055));
+        const bannerY = canvas.height - bannerHeight;
+
+        // 3. Fond bleu marine semi-transparent
+        ctx.fillStyle = 'rgba(11, 29, 54, 0.88)';
+        ctx.fillRect(0, bannerY, canvas.width, bannerHeight);
+
+        // Fine ligne de séparation supérieure bleu clair
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.7)';
+        ctx.fillRect(0, bannerY, canvas.width, Math.max(1, Math.round(canvas.height * 0.002)));
+
+        // 4. Ajuster automatiquement la taille de police pour que le texte tienne toujours en 1 ligne
+        let fontSize = Math.max(14, Math.round(bannerHeight * 0.44));
+        ctx.font = `600 ${fontSize}px Arial, Helvetica, sans-serif`;
+        const maxTextWidth = canvas.width - 32;
+
+        while (ctx.measureText(bannerText).width > maxTextWidth && fontSize > 10) {
+            fontSize -= 1;
+            ctx.font = `600 ${fontSize}px Arial, Helvetica, sans-serif`;
+        }
+
+        // 5. Écrire le texte centré en blanc net
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(bannerText, canvas.width / 2, bannerY + (bannerHeight / 2));
+
+        // 6. Télécharger le fichier JPEG final (Qualité 95%)
+        const stampedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        const a = document.createElement('a');
+        a.href = stampedDataUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+    img.src = dataUrl;
 }
 
 // Télécharger une photo en cours de saisie dans le formulaire (Section 2)
@@ -182,10 +234,12 @@ function downloadCurrentFormPhoto(type, zoomInIndex = 0) {
 
     if (type === 'out' && tempZoomOutPhoto) {
         const fileName = buildPhotoFileName(sn, anomNum, anomType, frame, stringer, 'ZoomOut');
-        triggerImageDownload(tempZoomOutPhoto, fileName);
+        const bannerText = buildBannerText(sn, anomNum, anomType, frame, stringer, 'Zoom Out');
+        triggerImageDownloadWithBanner(tempZoomOutPhoto, fileName, bannerText);
     } else if (type === 'in' && tempZoomInPhotos[zoomInIndex]) {
         const fileName = buildPhotoFileName(sn, anomNum, anomType, frame, stringer, `ZoomIn_${zoomInIndex + 1}`);
-        triggerImageDownload(tempZoomInPhotos[zoomInIndex], fileName);
+        const bannerText = buildBannerText(sn, anomNum, anomType, frame, stringer, `Zoom In #${zoomInIndex + 1}`);
+        triggerImageDownloadWithBanner(tempZoomInPhotos[zoomInIndex], fileName, bannerText);
     }
 }
 
@@ -198,10 +252,12 @@ function downloadSavedAnomalyPhoto(anomIndex, type, zoomInIndex = 0) {
 
     if (type === 'out' && anom.zoomOutPhoto) {
         const fileName = buildPhotoFileName(sn, anomNum, anom.type, anom.frame, anom.stringer, 'ZoomOut');
-        triggerImageDownload(anom.zoomOutPhoto, fileName);
+        const bannerText = buildBannerText(sn, anomNum, anom.type, anom.frame, anom.stringer, 'Zoom Out');
+        triggerImageDownloadWithBanner(anom.zoomOutPhoto, fileName, bannerText);
     } else if (type === 'in' && anom.zoomInPhotos && anom.zoomInPhotos[zoomInIndex]) {
         const fileName = buildPhotoFileName(sn, anomNum, anom.type, anom.frame, anom.stringer, `ZoomIn_${zoomInIndex + 1}`);
-        triggerImageDownload(anom.zoomInPhotos[zoomInIndex], fileName);
+        const bannerText = buildBannerText(sn, anomNum, anom.type, anom.frame, anom.stringer, `Zoom In #${zoomInIndex + 1}`);
+        triggerImageDownloadWithBanner(anom.zoomInPhotos[zoomInIndex], fileName, bannerText);
     }
 }
 
@@ -212,12 +268,12 @@ function downloadAllPhotosForAnomaly(anomIndex) {
     let delay = 0;
     if (anom.zoomOutPhoto) {
         setTimeout(() => downloadSavedAnomalyPhoto(anomIndex, 'out'), delay);
-        delay += 300;
+        delay += 350;
     }
     if (anom.zoomInPhotos && anom.zoomInPhotos.length > 0) {
         anom.zoomInPhotos.forEach((_, idx) => {
             setTimeout(() => downloadSavedAnomalyPhoto(anomIndex, 'in', idx), delay);
-            delay += 300;
+            delay += 350;
         });
     }
 }
@@ -569,7 +625,7 @@ function renderApp() {
 
                 <div class="dimensions-box" style="margin-bottom:0; display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
                     <div>
-                        <strong style="color: #60A5FA; font-size: 0.92rem;">QR Code Atelier (V13)</strong>
+                        <strong style="color: #60A5FA; font-size: 0.92rem;">QR Code Atelier (V14)</strong>
                         <p style="font-size: 0.78rem; color: var(--text-muted);">Demande le mot de passe au scan.</p>
                     </div>
                     <button type="button" class="small-btn" style="background-color: #8B5CF6;" onclick="showWorkshopQRCode()">
@@ -833,7 +889,7 @@ function compressAndReadImage(file, callback) {
     reader.readAsDataURL(file);
 }
 
-// Aperçu des photos avec bouton 💾 de téléchargement renommé et bouton × de suppression
+// Aperçu des photos avec bouton 💾 (téléchargement avec bandeau + renommage) et bouton ×
 function renderPhotoPreviews() {
     const previewOut = document.getElementById('preview-zoom-out');
     const previewIn = document.getElementById('preview-zoom-in');
@@ -841,7 +897,7 @@ function renderPhotoPreviews() {
         previewOut.innerHTML = tempZoomOutPhoto
             ? `<div style="position:relative;display:inline-block;">
                  <img src="${tempZoomOutPhoto}" class="photo-thumb" alt="Zoom Out">
-                 <button type="button" onclick="downloadCurrentFormPhoto('out')" title="Télécharger la photo renommée" style="position:absolute;bottom:2px;left:2px;background:#10B981;color:#fff;border:none;border-radius:4px;width:24px;height:22px;font-size:12px;padding:0;line-height:22px;cursor:pointer;">💾</button>
+                 <button type="button" onclick="downloadCurrentFormPhoto('out')" title="Télécharger la photo avec bandeau et nom auto" style="position:absolute;bottom:2px;left:2px;background:#10B981;color:#fff;border:none;border-radius:4px;width:24px;height:22px;font-size:12px;padding:0;line-height:22px;cursor:pointer;">💾</button>
                  <button type="button" onclick="removeZoomOutPhoto()" title="Supprimer" style="position:absolute;top:2px;right:2px;background:#EF4444;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:12px;padding:0;line-height:22px;cursor:pointer;">×</button>
                </div>`
             : '';
@@ -850,7 +906,7 @@ function renderPhotoPreviews() {
         previewIn.innerHTML = tempZoomInPhotos.map((src, idx) => `
             <div style="position:relative;display:inline-block;">
                 <img src="${src}" class="photo-thumb" alt="Zoom In">
-                <button type="button" onclick="downloadCurrentFormPhoto('in', ${idx})" title="Télécharger la photo renommée" style="position:absolute;bottom:2px;left:2px;background:#10B981;color:#fff;border:none;border-radius:4px;width:24px;height:22px;font-size:12px;padding:0;line-height:22px;cursor:pointer;">💾</button>
+                <button type="button" onclick="downloadCurrentFormPhoto('in', ${idx})" title="Télécharger la photo avec bandeau et nom auto" style="position:absolute;bottom:2px;left:2px;background:#10B981;color:#fff;border:none;border-radius:4px;width:24px;height:22px;font-size:12px;padding:0;line-height:22px;cursor:pointer;">💾</button>
                 <button type="button" onclick="removeZoomInPhoto(${idx})" title="Supprimer" style="position:absolute;top:2px;right:2px;background:#EF4444;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:12px;padding:0;line-height:22px;cursor:pointer;">×</button>
             </div>
         `).join('');
@@ -1039,7 +1095,6 @@ function renderAnomaliesList() {
         const hasOut = !!anom.zoomOutPhoto;
         const inCount = anom.zoomInPhotos ? anom.zoomInPhotos.length : 0;
 
-        // Création des boutons de téléchargement photo renommée pour chaque anomalie
         let photoDownloadButtons = '';
         if (hasOut) {
             photoDownloadButtons += `<button type="button" class="small-btn" style="background:#0D9488;padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="downloadSavedAnomalyPhoto(${idx}, 'out')">💾 Zoom Out</button>`;
@@ -1053,7 +1108,7 @@ function renderAnomaliesList() {
             photoDownloadButtons += `<button type="button" class="small-btn" style="background:#10B981;padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="downloadAllPhotosForAnomaly(${idx})">📥 Toutes les photos</button>`;
         }
 
-        const sampleName = buildPhotoFileName(currentAircraftReport.aircraftSN, idx + 1, anom.type, anom.frame, anom.stringer, '...');
+        const sampleBanner = buildBannerText(currentAircraftReport.aircraftSN, idx + 1, anom.type, anom.frame, anom.stringer, 'Zoom...');
 
         return `
         <div class="anomaly-item" style="${editingAnomalyIndex === idx ? 'border-color: #F59E0B;' : ''}">
@@ -1066,7 +1121,7 @@ function renderAnomaliesList() {
                 </div>
                 ${photoDownloadButtons ? `
                     <div style="margin-top:0.45rem;display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;">
-                        <span style="font-size:0.75rem;color:#94A3B8;">Télécharger photo(s) (${sampleName}) :</span>
+                        <span style="font-size:0.75rem;color:#94A3B8;" title="Bandeau : ${sampleBanner}">Télécharger avec bandeau :</span>
                         ${photoDownloadButtons}
                     </div>
                 ` : ''}
@@ -1189,22 +1244,33 @@ function adminDeleteStringer(index) {
 }
 
 // =========================================================================
-// GÉNÉRATION PDF GRAND FORMAT INGÉNIERIE (PHOTOS EN 680 x 512 px)
+// GÉNÉRATION PDF GRAND FORMAT INGÉNIERIE (PHOTOS 680 x 512 px AVEC BANDEAU)
 // =========================================================================
 
 function generateReportHTML(recipientEmail) {
     const rows = currentAircraftReport.anomalies.map((anom, i) => {
-        const zoomInImgs = anom.zoomInPhotos.map((src, idx) => `
+        const anomNum = i + 1;
+
+        const zoomInImgs = anom.zoomInPhotos.map((src, idx) => {
+            const bannerIn = buildBannerText(currentAircraftReport.aircraftSN, anomNum, anom.type, anom.frame, anom.stringer, `Zoom In #${idx + 1}`);
+            return `
             <div style="margin-bottom:14px;page-break-inside:avoid;">
                 <div style="font-size:12px;font-weight:bold;color:#0f172a;margin-bottom:4px;">Photo Anomalie (Zoom In #${idx + 1}) — 680 × 512 px :</div>
-                <img src="${src}" style="width:680px;height:512px;object-fit:contain;background:#000;border:1px solid #64748b;border-radius:4px;display:block;">
-            </div>
-        `).join('');
+                <div style="position:relative;width:680px;height:512px;background:#000;border:1px solid #64748b;border-radius:4px;overflow:hidden;">
+                    <img src="${src}" style="width:680px;height:512px;object-fit:contain;display:block;">
+                    <div style="position:absolute;bottom:0;left:0;width:100%;background:rgba(11,29,54,0.9);border-top:1px solid #3B82F6;color:#ffffff;font-size:13px;font-weight:bold;text-align:center;padding:7px 8px;box-sizing:border-box;font-family:Arial,sans-serif;letter-spacing:0.2px;">
+                        ${bannerIn}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        const bannerOut = buildBannerText(currentAircraftReport.aircraftSN, anomNum, anom.type, anom.frame, anom.stringer, 'Zoom Out');
 
         return `
             <div style="border:1px solid #94a3b8;border-radius:6px;padding:14px;margin-bottom:20px;background:#f8fafc;color:#0f172a;">
                 <h3 style="color:#0F2744;margin:0 0 8px 0;font-size:16px;border-bottom:2px solid #cbd5e1;padding-bottom:4px;">
-                    Anomalie #${i + 1} — ${anom.type.toUpperCase()}
+                    Anomalie #${anomNum} — ${anom.type.toUpperCase()}
                 </h3>
                 <p style="margin:4px 0;font-size:13.5px;color:#0f172a;"><strong>Pièce :</strong> ${anom.partName} (PN: ${anom.partPN}) &nbsp;|&nbsp; <strong>Zone :</strong> ${anom.frame} - ${anom.stringer}</p>
                 <p style="margin:4px 0;font-size:13.5px;color:#0f172a;"><strong>Dimensions :</strong> ${anom.dimensions}</p>
@@ -1213,7 +1279,12 @@ function generateReportHTML(recipientEmail) {
                     ${anom.zoomOutPhoto ? `
                         <div style="margin-bottom:14px;page-break-inside:avoid;">
                             <div style="font-size:12px;font-weight:bold;color:#0f172a;margin-bottom:4px;">Photo Zone (Zoom Out) — 680 × 512 px :</div>
-                            <img src="${anom.zoomOutPhoto}" style="width:680px;height:512px;object-fit:contain;background:#000;border:1px solid #64748b;border-radius:4px;display:block;">
+                            <div style="position:relative;width:680px;height:512px;background:#000;border:1px solid #64748b;border-radius:4px;overflow:hidden;">
+                                <img src="${anom.zoomOutPhoto}" style="width:680px;height:512px;object-fit:contain;display:block;">
+                                <div style="position:absolute;bottom:0;left:0;width:100%;background:rgba(11,29,54,0.9);border-top:1px solid #3B82F6;color:#ffffff;font-size:13px;font-weight:bold;text-align:center;padding:7px 8px;box-sizing:border-box;font-family:Arial,sans-serif;letter-spacing:0.2px;">
+                                    ${bannerOut}
+                                </div>
+                            </div>
                         </div>
                     ` : ''}
                     ${zoomInImgs}
@@ -1333,7 +1404,7 @@ function showReadyToSendModal(fileName, recipient) {
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(9,17,30,0.9);z-index:999999;display:flex;align-items:center;justify-content:center;padding:1rem;';
     modal.innerHTML = `
         <div style="background:#0F2744;border:2px solid #10B981;border-radius:10px;padding:1.5rem;max-width:460px;width:100%;text-align:center;color:#F8FAFC;box-shadow:0 10px 25px rgba(0,0,0,0.5);">
-            <h3 style="color:#34D399;margin-bottom:0.5rem;font-size:1.15rem;">✅ Rapport PDF (Photos 680×512px) Prêt !</h3>
+            <h3 style="color:#34D399;margin-bottom:0.5rem;font-size:1.15rem;">✅ Rapport PDF (Photos 680×512px + Bandeau) Prêt !</h3>
             <p style="font-size:0.88rem;color:#94A3B8;margin-bottom:1rem;">
                 Fichier : <strong style="color:#fff;">${fileName}</strong><br>
                 Destinataire copié : <strong style="color:#60A5FA;">${recipient}</strong>
@@ -1401,11 +1472,11 @@ async function triggerPcFallback() {
 }
 
 // =========================================================================
-// GÉNÉRATEUR DE QR CODE & AFFICHE D'ATELIER (AVEC PARAMÈTRE ?v=13)
+// GÉNÉRATEUR DE QR CODE & AFFICHE D'ATELIER (AVEC PARAMÈTRE ?v=14)
 // =========================================================================
 
 function showWorkshopQRCode() {
-    const appUrl = "https://bkhedher270775-debug.github.io/skin-care-pwa/?v=13";
+    const appUrl = "https://bkhedher270775-debug.github.io/skin-care-pwa/?v=14";
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(appUrl)}`;
 
     let modal = document.getElementById('qr-code-modal');
@@ -1416,13 +1487,13 @@ function showWorkshopQRCode() {
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(9,17,30,0.92);z-index:999999;display:flex;align-items:center;justify-content:center;padding:1rem;';
     modal.innerHTML = `
         <div style="background:#0F2744;border:2px solid #3B82F6;border-radius:12px;padding:1.5rem;max-width:420px;width:100%;text-align:center;color:#F8FAFC;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
-            <div style="font-size:0.75rem;color:#60A5FA;font-weight:bold;letter-spacing:0.5px;margin-bottom:0.25rem;">REAR FUSE PN: C013900001-001 (V13 SÉCURISÉE)</div>
-            <h3 style="color:#ffffff;margin-bottom:0.5rem;font-size:1.2rem;">Accès Mobile — Skin Care V13</h3>
+            <div style="font-size:0.75rem;color:#60A5FA;font-weight:bold;letter-spacing:0.5px;margin-bottom:0.25rem;">REAR FUSE PN: C013900001-001 (V14 SÉCURISÉE)</div>
+            <h3 style="color:#ffffff;margin-bottom:0.5rem;font-size:1.2rem;">Accès Mobile — Skin Care V14</h3>
             <p style="font-size:0.85rem;color:#94A3B8;margin-bottom:1rem;">
                 Scannez ce QR Code avec le téléphone (Accès protégé par mot de passe) :
             </p>
             <div style="background:#ffffff;padding:12px;border-radius:8px;display:inline-block;margin-bottom:1rem;">
-                <img src="${qrApiUrl}" alt="QR Code Skin Care V13" style="width:220px;height:220px;display:block;">
+                <img src="${qrApiUrl}" alt="QR Code Skin Care V14" style="width:220px;height:220px;display:block;">
             </div>
             <p style="font-size:0.75rem;color:#CBD5E1;margin-bottom:1.2rem;word-break:break-all;">
                 ${appUrl}
@@ -1445,11 +1516,11 @@ function printWorkshopPoster(qrApiUrl, appUrl) {
     if (!w) return alert("Autorisez les fenêtres pop-ups pour imprimer l'affiche.");
     w.document.write(`
         <html>
-        <head><title>Affiche Atelier - Skin Care V13</title></head>
+        <head><title>Affiche Atelier - Skin Care V14</title></head>
         <body onload="setTimeout(() => window.print(), 400);" style="font-family:Arial,sans-serif;text-align:center;padding:40px;color:#0F2744;">
             <div style="border:4px solid #0F2744;border-radius:16px;padding:40px;max-width:600px;margin:0 auto;">
                 <div style="background:#0F2744;color:#ffffff;padding:8px 16px;border-radius:20px;display:inline-block;font-weight:bold;font-size:14px;">
-                    REAR FUSE PN: C013900001-001 — ACCÈS SÉCURISÉ V13
+                    REAR FUSE PN: C013900001-001 — ACCÈS SÉCURISÉ V14
                 </div>
                 <h1 style="font-size:32px;margin:20px 0 10px 0;">APPLICATION SKIN CARE</h1>
                 <h2 style="font-size:18px;color:#475569;margin-top:0;">Inspection & Déclaration des Anomalies de Surface</h2>
@@ -1469,4 +1540,4 @@ function printWorkshopPoster(qrApiUrl, appUrl) {
     `);
     w.document.close();
 }
-// FIN DU FICHIER APP.JS V13
+// FIN DU FICHIER APP.JS V14
