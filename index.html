@@ -3,22 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Protection Droit d'Auteur dans les métadonnées -->
     <meta name="author" content="Haithem B.K">
     <meta name="copyright" content="Copyright © 2026. Haithem B.K — Licence d'utilisation interne accordée exclusivement au PreFAL-Rear.">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Skin Care - PreFAL-Rear Inspection (V15)</title>
+    <title>Skin Care - PreFAL-Rear Inspection (REV.16)</title>
     
-    <!-- PWA Manifest V15 -->
-    <link rel="manifest" href="manifest.json?v=15">
+    <!-- PWA Manifest REV.16 -->
+    <link rel="manifest" href="manifest.json?v=16">
     
-    <!-- Feuille de style V15 -->
-    <link rel="stylesheet" href="style.css?v=15">
+    <!-- Feuille de style REV.16 -->
+    <link rel="stylesheet" href="style.css?v=16">
     
     <meta name="theme-color" content="#0F2744">
-    <link rel="icon" type="image/png" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=16">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=16">
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=16">
     
     <!-- Bibliothèque html2pdf -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -28,7 +29,7 @@
         <header>
             <div style="display:flex; justify-content:center; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
                 <span class="header-badge" style="margin-bottom:0;">PreFAL-Rear — PN: C013900001-001</span>
-                <span class="header-badge" style="margin-bottom:0; background:rgba(16,185,129,0.2); color:#34D399; border-color:#10B981;">VERSION V15</span>
+                <span class="header-badge" style="margin-bottom:0; background:rgba(16,185,129,0.2); color:#34D399; border-color:#10B981;">REV.16</span>
                 <button type="button" onclick="forceMobileUpdate()" style="width:auto; padding:0.2rem 0.6rem; font-size:0.75rem; background:#334155; border-radius:999px;">
                     🔄 Actualiser App
                 </button>
@@ -41,25 +42,24 @@
             <!-- Interface générée dynamiquement par app.js -->
         </main>
 
-        <!-- Pied de page officiel de protection Copyright Bilingue PreFAL-Rear -->
+        <!-- Pied de page officiel de protection Copyright PreFAL-Rear -->
         <footer style="text-align:center; padding:1.25rem 1rem; margin-top:1.5rem; border-top:1px solid #2A4365; color:#94A3B8; font-size:0.76rem; line-height:1.5;">
             <strong style="color:#E2E8F0;">Copyright © 2026. Haithem B.K — Licence d'utilisation interne accordée exclusivement au PreFAL-Rear.</strong><br>
-            <span style="color:#CBD5E1;">Copyright © 2026. Haithem B.K — Internal use license granted exclusively to PreFAL-Rear. All rights reserved.</span><br>
-            Toute reproduction, modification ou distribution non autorisée est strictement interdite / Unauthorized reproduction or distribution is strictly prohibited.
+            <span style="color:#CBD5E1;">Copyright © 2026. Haithem B.K — Internal use license granted exclusively to PreFAL-Rear. All rights reserved.</span>
         </footer>
     </div>
 
-    <!-- Script principal V15 -->
-    <script src="app.js?v=15"></script>
+    <!-- Script principal REV.16 -->
+    <script src="app.js?v=16"></script>
 
-    <!-- Enregistrement du Service Worker V15 -->
+    <!-- Enregistrement du Service Worker REV.16 -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=15')
+                navigator.serviceWorker.register('./sw.js?v=16')
                     .then(reg => {
                         reg.update();
-                        console.log('Service Worker V15 actif :', reg.scope);
+                        console.log('Service Worker REV.16 actif :', reg.scope);
                     })
                     .catch(err => console.error('Erreur Service Worker :', err));
             });
